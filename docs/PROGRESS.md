@@ -15,7 +15,8 @@
 
 - 한 것: git 상태 확인(리모트 없음, 로컬 커밋 5개 — 오류 아님), public 공개 대비 민감 정보 점검(DB/env 커밋 이력 전무, 코드 깨끗), 운영 단계 DB 논의 → "1인 기준 유지 + 마이그레이션 대비 설계" 합의를 PLAN.md §4.1로 문서화
 - 결정: SQLite 유지, 전환 트리거(타인 공개 or 쓰기 급증) 충족 시 Postgres+user_id+인증 일괄 도입. 저장소는 public 방향
-- 다음: IDEAS.md "공개 준비" 4항목 처리(DEPLOY.md 계정명 플레이스홀더, README 재작성 등) → `gh repo create ijik-os --public` push → VPS 배포
+- 이어서 공개 완료: 공개 준비 4항목 처리(계정명 플레이스홀더, README 보강, 이름 유지 결정+로컬 경로 정리) → **https://github.com/hhm0215/ijik-os 공개 push 완료**
+- 다음: VPS에서 DEPLOY.md 절차 실행 (clone → docker compose up → 모델 pull → 리버스 프록시+Basic Auth)
 
 ### 2026-07-07 — VPS 배포 준비 (Docker Compose)
 
