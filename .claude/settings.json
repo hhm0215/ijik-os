@@ -1,0 +1,30 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm run dev:*)",
+      "Bash(npm run build:*)",
+      "Bash(npm run lint:*)",
+      "Bash(npm run db:push:*)",
+      "Bash(npx drizzle-kit:*)",
+      "Bash(sqlite3:*)",
+      "Bash(ollama list:*)",
+      "Bash(ollama ps:*)",
+      "Bash(ollama show:*)",
+      "Bash(curl -s http://localhost:*)",
+      "Bash(git status:*)",
+      "Bash(git log:*)",
+      "Bash(git diff:*)",
+      "Bash(git add:*)"
+    ],
+    "ask": [
+      "Bash(git push:*)",
+      "Bash(npm install:*)",
+      "Bash(ollama pull:*)"
+    ],
+    "deny": [
+      "Read(./.env.local)",
+      "Bash(rm -rf data:*)",
+      "Bash(rm -rf .git:*)"
+    ]
+  }
+}
