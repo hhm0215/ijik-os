@@ -1,36 +1,33 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# 이직 OS
 
-## Getting Started
+경험 뱅크 기반 개인 지원 전략 도구. 채용 공고를 붙여넣으면 내가 미리 작성한 경험 카드에서만 지원 자료를 재구성하고, 근거가 부족하면 되묻는다.
 
-First, run the development server:
+**핵심 원칙: AI는 작가가 아니라 편집자 + 인터뷰어다.** 모든 AI 생성 문장은 경험 카드 출처가 필수(DB CHECK 제약으로 강제), 근거 없는 요구사항에는 문장 대신 되묻기 질문이 생성된다.
+
+## 시작하기
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+# 1. API 키 설정 (최초 1회)
+cp .env.local.example .env.local
+# .env.local에 ANTHROPIC_API_KEY 입력
+
+# 2. 실행
+npm install
+npm run db:push   # 최초 1회 — SQLite 스키마 생성
+npm run dev       # http://localhost:3000
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## 사용 흐름
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+1. **경험 뱅크**에 경험 카드를 작성한다 (상황/역할/행동/수치/주장해도 되는 것).
+2. **공고 피드**에서 채용 공고 본문을 붙여넣는다 → 분석 시작 (1~3분).
+3. **공고 상세**에서 확인: 요구사항 분해+매칭 / 적합도 breakdown+출처 달린 초안 / 되묻기 질문.
+4. 되묻기에 답하면 새 경험 카드로 저장 → "다시 분석"하면 초안에 반영.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## 구조
 
-## Learn More
+- Next.js 16 (App Router) + TypeScript + Tailwind
+- SQLite (`data/app.db`) + Drizzle ORM — 스키마: `src/db/schema.ts`
+- Claude API (`claude-opus-4-8`) — 파이프라인: `src/lib/pipeline/run.ts`
 
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+자세한 규칙과 로드맵은 `AGENTS.md`, 아이디어/피드백은 `IDEAS.md`에 기록.
