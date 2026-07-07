@@ -1,4 +1,3 @@
-import { zodOutputFormat } from "@anthropic-ai/sdk/helpers/zod";
 import { eq } from "drizzle-orm";
 import {
   askbacks,
@@ -13,7 +12,7 @@ import {
   matches,
   requirements,
 } from "@/db";
-import { getClient, MODEL } from "@/lib/anthropic";
+import { generateStructured } from "@/lib/llm";
 import {
   analysisSchema,
   extractionSchema,
@@ -68,20 +67,14 @@ export async function runPipeline(postingId: number): Promise<void> {
     if (cards.length === 0)
       throw new Error("경험 카드가 없습니다. 먼저 경험 뱅크에 카드를 추가하세요.");
 
-    const client = getClient();
-
     // 1) 공고에서 요구사항 추출
-    const extractRes = await client.messages.parse({
-      model: MODEL,
-      max_tokens: 16000,
-      thinking: { type: "adaptive" },
+    const extraction = await generateStructured({
+      schema: extractionSchema,
+      maxTokens: 8000,
       system:
         "채용 공고 분석가. 공고 원문에서 제목, 회사명, 그리고 지원자에게 요구되는 사항을 추출한다. 요구사항은 기술(tech), 도메인 지식(domain), 협업/리딩(collab), 성과/임팩트(impact)로 분류한다. 중복 없이 핵심 요구사항 4~10개로 정리. 모든 텍스트는 한국어로.",
-      messages: [{ role: "user", content: `공고 원문:\n\n${posting.rawText}` }],
-      output_config: { format: zodOutputFormat(extractionSchema) },
+      user: `공고 원문:\n\n${posting.rawText}`,
     });
-    const extraction = extractRes.parsed_output;
-    if (!extraction) throw new Error("요구사항 추출 결과 파싱 실패");
 
     db.update(jobPostings)
       .set({ title: extraction.title, company: extraction.company })
@@ -100,10 +93,9 @@ export async function runPipeline(postingId: number): Promise<void> {
     const reqList = reqRows
       .map((r, i) => `${i}. [${r.category}] ${r.text}`)
       .join("\n");
-    const analyzeRes = await client.messages.parse({
-      model: MODEL,
-      max_tokens: 32000,
-      thinking: { type: "adaptive" },
+    const analysis = await generateStructured({
+      schema: analysisSchema,
+      maxTokens: 16000,
       system: `지원 전략 조수. 사용자의 경험 카드와 채용 공고 요구사항을 비교 분석한다. 모든 출력은 한국어.
 
 ${AUTHORSHIP_RULE}
@@ -116,22 +108,14 @@ ${AUTHORSHIP_RULE}
 5. resumePoints: 이 공고에 맞춰 이력서에서 강조할 bullet 후보. 각각 primaryCardId 필수.
 6. askbacks: 근거가 없거나 약한 요구사항마다 사용자에게 되물을 질문. why에는 어떤 요구사항 때문인지. requirementIndex 연결(일반 질문이면 null).
 7. interview: 공고 기반 예상 질문 최대 10개(qtype=posting) + 약점 질문 3개(qtype=weakness, 근거가 부족해 보이는 부분을 면접관이 찌른다면). answerPoints의 각 bullet은 근거 카드 cardId 필수 — 카드에 근거가 없으면 cardId=null로 두고 text에는 "준비 필요: (무엇을 준비할지)"만 쓴다.`,
-      messages: [
-        {
-          role: "user",
-          content: `## 채용 공고: ${extraction.title} (${extraction.company})
+      user: `## 채용 공고: ${extraction.title} (${extraction.company})
 
 ## 요구사항 목록
 ${reqList}
 
 ## 내 경험 카드
 ${serializeCards(cards)}`,
-        },
-      ],
-      output_config: { format: zodOutputFormat(analysisSchema) },
     });
-    const analysis = analyzeRes.parsed_output;
-    if (!analysis) throw new Error("분석 결과 파싱 실패");
 
     // LLM이 존재하지 않는 카드 ID를 만들어냈을 가능성 차단
     const validCardIds = new Set(cards.map((c) => c.id));
@@ -144,31 +128,21 @@ ${serializeCards(cards)}`,
     ];
     let overClaims = new Set<number>();
     if (sentencesToVerify.length > 0) {
-      const verifyRes = await client.messages.parse({
-        model: MODEL,
-        max_tokens: 16000,
-        thinking: { type: "adaptive" },
+      const verification = await generateStructured({
+        schema: verificationSchema,
+        maxTokens: 8000,
         system: `검증자. 각 문장이 출처 카드의 내용과 "주장해도 되는 것" 범위 안에 있는지 판정한다. 카드 내용을 넘어선 과장, "주장하면 안 되는 것"에 해당하는 주장, 카드에 없는 수치는 withinClaimable=false. reason은 한국어 한 문장.`,
-        messages: [
-          {
-            role: "user",
-            content: `## 경험 카드
+        user: `## 경험 카드
 ${serializeCards(cards)}
 
 ## 검증할 문장 (sentenceIndex. [출처 카드ID] 문장)
 ${sentencesToVerify.map((s, i) => `${i}. [카드 #${s.cardId}] ${s.text}`).join("\n")}`,
-          },
-        ],
-        output_config: { format: zodOutputFormat(verificationSchema) },
       });
-      const verification = verifyRes.parsed_output;
-      if (verification) {
-        overClaims = new Set(
-          verification.results
-            .filter((r) => !r.withinClaimable)
-            .map((r) => r.sentenceIndex)
-        );
-      }
+      overClaims = new Set(
+        verification.results
+          .filter((r) => !r.withinClaimable)
+          .map((r) => r.sentenceIndex)
+      );
     }
 
     // 4) 저장

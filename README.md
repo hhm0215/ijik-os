@@ -7,15 +7,18 @@
 ## 시작하기
 
 ```bash
-# 1. API 키 설정 (최초 1회)
-cp .env.local.example .env.local
-# .env.local에 ANTHROPIC_API_KEY 입력
+# 1. 로컬 LLM 준비 (최초 1회, 무료)
+brew install ollama
+brew services start ollama
+ollama pull qwen3:8b
 
 # 2. 실행
 npm install
 npm run db:push   # 최초 1회 — SQLite 스키마 생성
 npm run dev       # http://localhost:3000
 ```
+
+Claude API 키가 있으면 `.env.local`에 `ANTHROPIC_API_KEY`를 넣으세요 — 자동으로 Claude를 사용해요 (품질↑, 유료). 없으면 Ollama 로컬 모델로 동작해요 (무료, 데이터가 기기 밖으로 안 나감). 자세한 옵션은 `.env.local.example` 참고.
 
 ## 사용 흐름
 
@@ -28,6 +31,6 @@ npm run dev       # http://localhost:3000
 
 - Next.js 16 (App Router) + TypeScript + Tailwind
 - SQLite (`data/app.db`) + Drizzle ORM — 스키마: `src/db/schema.ts`
-- Claude API (`claude-opus-4-8`) — 파이프라인: `src/lib/pipeline/run.ts`
+- LLM: Ollama 로컬 모델(기본) 또는 Claude API — 추상화: `src/lib/llm.ts`, 파이프라인: `src/lib/pipeline/run.ts`
 
 자세한 규칙과 로드맵은 `AGENTS.md`, 아이디어/피드백은 `IDEAS.md`에 기록.

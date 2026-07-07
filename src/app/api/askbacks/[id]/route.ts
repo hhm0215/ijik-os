@@ -1,8 +1,7 @@
-import { zodOutputFormat } from "@anthropic-ai/sdk/helpers/zod";
 import { eq } from "drizzle-orm";
 import { z } from "zod";
 import { askbacks, db, experienceCards } from "@/db";
-import { getClient, MODEL } from "@/lib/anthropic";
+import { generateStructured } from "@/lib/llm";
 
 export const maxDuration = 300;
 
@@ -40,22 +39,12 @@ export async function POST(request: Request, { params }: Ctx) {
 
   let fields: z.infer<typeof cardFromAnswerSchema>;
   try {
-    const client = getClient();
-    const res = await client.messages.parse({
-      model: MODEL,
-      max_tokens: 8000,
-      thinking: { type: "adaptive" },
+    fields = await generateStructured({
+      schema: cardFromAnswerSchema,
+      maxTokens: 4000,
       system: `사용자의 답변을 경험 카드로 구조화한다. 절대 원칙: 사용자가 말한 내용만 사용하고, 말하지 않은 경험·수치·기술을 창작하지 않는다. 답변에 없는 필드는 빈 문자열로 둔다. claimable(주장해도 되는 것)은 답변에서 실제로 뒷받침되는 범위만. 모든 텍스트는 한국어. tags는 쉼표 구분.`,
-      messages: [
-        {
-          role: "user",
-          content: `## 질문\n${askback.question}\n\n## 사용자 답변\n${answer}`,
-        },
-      ],
-      output_config: { format: zodOutputFormat(cardFromAnswerSchema) },
+      user: `## 질문\n${askback.question}\n\n## 사용자 답변\n${answer}`,
     });
-    if (!res.parsed_output) throw new Error("파싱 실패");
-    fields = res.parsed_output;
   } catch {
     // LLM 실패 시에도 답변은 잃지 않는다 — 원문 그대로 카드로 저장
     fields = {

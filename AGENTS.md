@@ -25,7 +25,10 @@ This version has breaking changes — APIs, conventions, and file structure may 
 
 - Next.js 16 (App Router) + TypeScript + Tailwind — `params`는 Promise, 라우트 핸들러는 Web Request/Response
 - SQLite (`data/app.db`, gitignored) + Drizzle ORM (`src/db/`)
-- Claude API (`@anthropic-ai/sdk`) — 키는 `.env.local`의 `ANTHROPIC_API_KEY`
+- LLM은 `src/lib/llm.ts` 추상화를 통해서만 호출한다 (직접 SDK/fetch 호출 금지):
+  - `ANTHROPIC_API_KEY` 있으면 Claude(`claude-opus-4-8`), 없으면 Ollama 로컬 모델(기본 `qwen3:8b`, `OLLAMA_MODEL`로 변경)
+  - 두 경로 모두 zod 스키마 기반 구조화 출력 (Claude: `messages.parse`, Ollama: `format` 파라미터)
+  - 사용자는 유료 API 미사용 — 기본 경로는 Ollama. 로컬 8B 모델 품질 한계로 인한 이슈는 프롬프트 단순화/호출 분할로 대응
 - LLM 파이프라인: `src/lib/pipeline/` (요구사항 추출 → 매칭/적합도 → 초안 → 되묻기 → 면접 질문)
 
 ## 명령어
