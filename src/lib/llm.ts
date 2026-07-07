@@ -11,6 +11,8 @@ import { getClient, MODEL } from "./anthropic";
 
 const OLLAMA_BASE_URL = process.env.OLLAMA_BASE_URL ?? "http://localhost:11434";
 const OLLAMA_MODEL = process.env.OLLAMA_MODEL ?? "qwen3:8b";
+// GPU 없는 서버(CPU 추론)는 호출당 수십 분 걸릴 수 있어 기본 30분, 환경변수로 조정
+const OLLAMA_TIMEOUT_MS = Number(process.env.OLLAMA_TIMEOUT_MS ?? 30 * 60_000);
 
 export function llmProviderInfo(): string {
   return process.env.ANTHROPIC_API_KEY
@@ -70,8 +72,7 @@ async function generateWithOllama<S extends z.ZodType>({
     response = await fetch(`${OLLAMA_BASE_URL}/api/chat`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      // 로컬 모델은 느릴 수 있으니 넉넉하게 15분
-      signal: AbortSignal.timeout(15 * 60_000),
+      signal: AbortSignal.timeout(OLLAMA_TIMEOUT_MS),
       body: JSON.stringify({
         model: OLLAMA_MODEL,
         stream: false,

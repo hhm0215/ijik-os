@@ -1,0 +1,30 @@
+services:
+  app:
+    build: .
+    restart: unless-stopped
+    # 127.0.0.1에만 바인딩 — 리버스 프록시(Basic Auth) 없이는 외부 접근 불가.
+    # 경험 뱅크는 민감 데이터이므로 이 줄을 "3400:3000"으로 바꾸지 말 것.
+    ports:
+      - "127.0.0.1:3400:3000"
+    environment:
+      OLLAMA_BASE_URL: http://ollama:11434
+      OLLAMA_MODEL: ${OLLAMA_MODEL:-qwen3:8b}
+      # CPU 추론은 느리다 — 호출당 최대 60분 허용
+      OLLAMA_TIMEOUT_MS: ${OLLAMA_TIMEOUT_MS:-3600000}
+      # Claude API를 쓰려면 .env에 키를 넣으면 자동 전환
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+    volumes:
+      - app-data:/app/data
+    depends_on:
+      - ollama
+
+  ollama:
+    image: ollama/ollama:latest
+    restart: unless-stopped
+    # 포트 미노출 — compose 내부 네트워크에서만 접근 가능
+    volumes:
+      - ollama-models:/root/.ollama
+
+volumes:
+  app-data:
+  ollama-models:

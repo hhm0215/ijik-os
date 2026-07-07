@@ -11,6 +11,13 @@
 
 ## 세션 로그
 
+### 2026-07-07 — VPS 배포 준비 (Docker Compose)
+
+- 한 것: Dockerfile(멀티스테이지 standalone) + docker-compose.yml(앱+Ollama, 127.0.0.1 바인딩) + docs/DEPLOY.md(호스팅어 VPS 가이드, 리버스 프록시+Basic Auth 예시, 스왑/백업). drizzle 마이그레이션 생성 — 빈 DB 첫 기동 시 스키마 자동 적용
+- 확인된 것: 로컬 Docker 빌드/기동/DB 자동 초기화/카드 생성 정상
+- 주의: VPS는 CPU 추론이라 분석이 20분~1시간 걸릴 수 있음. 보안상 리버스 프록시+인증 없이 공개 금지
+- 다음: 하혜민이 GitHub 저장소 push → VPS에서 DEPLOY.md 절차 실행
+
 ### 2026-07-07 — MVP 구축 + 로컬 LLM 전환 (커밋 9e4ec1d, 6dc7b3d)
 
 - 한 것: 설계 문서 1단계 전체 구현 (카드 CRUD, 분석 파이프라인, 3열 상세 화면), Ollama 전환 및 E2E 검증
