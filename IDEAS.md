@@ -28,10 +28,10 @@ _(아직 없음 — MVP 사용 후 기록)_
 
 ## 공개 준비 (GitHub public 전에)
 
-- [open] (2026-07-07) docs/DEPLOY.md의 Basic Auth 예시 계정명 `hanhyemin` → `<사용자명>` 플레이스홀더로 (실 운영 인증 아이디 노출 방지)
-- [open] (2026-07-07) README.md를 프로젝트 소개 + AI 저작권 원칙 설명으로 재작성 (지금은 Create Next App 기본) — public이면 포트폴리오 역할
-- [open] (2026-07-07) 문서 속 개인 이름/로컬 경로(`~/.gstack/...`) 일반화 여부 결정 (선택)
-- [open] (2026-07-07) 리모트 연결 + push: `gh repo create ijik-os --public --source . --push` (위 항목 정리 후)
+- [done] (2026-07-07) docs/DEPLOY.md의 Basic Auth 예시 계정명 → `<사용자명>` 플레이스홀더로
+- [done] (2026-07-07) README.md 보강 — 저작권 3중 강제 표, 배포 섹션, 문서 링크 추가
+- [done] (2026-07-07) 이름은 유지하기로 결정 (본인 계정 공개 저장소 + 포트폴리오), 로컬 경로(`~/.gstack/...`) 참조는 제거
+- [done] (2026-07-07) `gh repo create ijik-os --public --source . --push`로 공개
 
 ## 운영/서비스화 대비
 

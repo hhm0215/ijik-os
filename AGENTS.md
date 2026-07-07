@@ -10,7 +10,7 @@ This version has breaking changes — APIs, conventions, and file structure may 
 
 경험 뱅크 기반 개인 지원 전략 도구. 채용 공고를 넣으면 내가 미리 작성한 경험 카드에서만 지원 자료를 재구성하고, 근거가 부족하면 되묻는다.
 
-설계 문서(승인됨): `~/.gstack/projects/Dev/hanhyemin-unknown-design-20260707-081038.md`
+설계 정본은 `docs/PLAN.md` (2026-07-07 승인된 설계 문서의 저장소 내 사본).
 
 ## 절대 원칙 — AI 저작권 경계
 

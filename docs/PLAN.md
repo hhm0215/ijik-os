@@ -1,7 +1,6 @@
 # 이직 OS — 초기 계획 정리
 
-> 2026-07-07 office-hours 세션에서 승인된 설계의 저장소 내 정본.
-> 원본 설계 문서: `~/.gstack/projects/Dev/hanhyemin-unknown-design-20260707-081038.md` (리뷰 3라운드, 9/10 PASS)
+> 2026-07-07 설계 세션에서 승인된 설계의 저장소 내 정본 (독립 리뷰 3라운드, 9/10 PASS).
 > 진행 상태는 [PROGRESS.md](./PROGRESS.md), 아이디어/피드백은 [IDEAS.md](../IDEAS.md)에서 관리.
 
 ## 1. 비전
