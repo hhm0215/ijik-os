@@ -11,8 +11,10 @@ _(아직 없음 — MVP 사용 후 기록)_
 
 ## 로컬 모델(qwen3:8b) 품질 관찰 — 첫 E2E 테스트 (2026-07-07)
 
-- [open] 적합도 점수 인플레이션: "주장하면 안 되는 것"에 결제 도메인이 있는데도 domain 100점. 채점 프롬프트에 notClaimable 감점 규칙 명시 필요
-- [open] 면접 질문이 3개만 생성됨 (요청은 최대 10개) — 프롬프트에 최소 개수 명시 or 호출 분리
+- [in-progress] (2026-07-11) 적합도 점수 인플레이션: 채점 프롬프트에 근거 강도별 점수 구간 + notClaimable 감점 규칙 명시로 수정. 코드 완료·빌드 통과, E2E 검증은 Windows Ollama 이슈(아래)로 보류
+- [in-progress] (2026-07-11) 면접 질문이 3개만 생성됨 → 면접 질문 생성을 별도 LLM 호출로 분리(파이프라인 4호출) + "posting 최소 6개, weakness 정확히 3개" 명시. 코드 완료·빌드 통과, E2E 검증 보류
+- [open] (2026-07-11) **Windows Ollama 0.13.1에서 구조화 출력 실패**: 대형 스키마(analysisSchema) 호출 시 `failed to load model vocabulary required for format` + 서버 로그 `error parsing grammar: unexpected end of input`. 작은 스키마(추출)는 성공. Mac에서는 재현 안 됐던 문제 — Ollama 버전 업그레이드 or 스키마 축소로 대응 검토. E2E 검증은 Mac에서 하거나 이 이슈 해결 후
+- [open] (2026-07-11) **재분석 시 이전 결과 미정리 버그**: 분석 실패 후 재실행하면 requirements가 중복 누적됨 (테스트 공고에서 7개→15개). runPipeline 시작 시 해당 공고의 기존 requirements/matches/askbacks/drafts/interview 정리 필요
 - 잘 되는 것: 요구사항 분해/분류 정확, weak 근거 → 되묻기 생성, over_claim 검증이 실제로 과장 문장을 잡아냄, 출처 없는 AI 문장 0건. 분석 1회 약 6분 (첫 로딩 포함)
 
 ## 아이디어 백로그 (설계 문서에서 이월)

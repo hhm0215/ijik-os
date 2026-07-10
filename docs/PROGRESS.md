@@ -5,11 +5,19 @@
 ## 현재 상태
 
 - **단계:** 1.5단계 (품질 안정화) — 로드맵은 [PLAN.md](./PLAN.md) §6
-- **다음 마일스톤:** 하혜민이 실제 카드/공고로 1주 실사용 → 피드백 수집 → 2단계 진입 판단
-- **차단 요소:** 없음
-- **실행 방법:** `npm run dev` (Ollama가 brew 서비스로 상시 실행 중)
+- **다음 마일스톤:** 품질 수정 2건 E2E 검증 완료 → VPS 배포 (RAM 8GB 확인됨, Ollama 유지·Claude API 안 씀) → 실사용
+- **차단 요소:** Windows 로컬에서 Ollama 구조화 출력 오류로 E2E 검증 불가 (IDEAS 참고). Mac에서 검증하거나 이슈 해결 필요
+- **실행 방법:** `npm run dev` (Mac: Ollama brew 서비스 / Windows: Ollama 앱)
 
 ## 세션 로그
+
+### 2026-07-11 — 품질 이슈 2건 수정 (Windows 새 환경, E2E 검증 보류)
+
+- 한 것: (1) 적합도 인플레이션 수정 — 분석 프롬프트에 근거 강도별 점수 구간(strong 80~100 / medium 50~79 / weak 20~49 / 없음 0~19)과 notClaimable 해당 요구사항 감점 규칙 명시. (2) 면접 질문 부족 수정 — 면접 질문 생성을 별도 LLM 호출로 분리(`interviewSchema` 신설, 파이프라인이 3→4호출), posting 최소 6개·weakness 정확히 3개 명시. 타입 체크·프로덕션 빌드 통과
+- 환경: 이 세션은 Windows 새 클론 환경 — npm install, Ollama 설치 확인, qwen3:8b 다운로드(5.2GB), 수정 검증용 테스트 데이터 투입(결제 도메인 notClaimable 카드 2장 + 결제 요구 공고 1건)
+- 막힌 것: Windows Ollama 0.13.1이 대형 스키마 구조화 출력에서 grammar 파싱 오류로 500 반환 → E2E 검증 못 함. 재분석 시 requirements 중복 누적 버그도 발견. 둘 다 IDEAS에 기록
+- 확인된 것: VPS는 RAM 8GB (DEPLOY.md 가정과 일치), Claude API는 안 쓰기로 — VPS도 Ollama 경로
+- 다음: (1) Mac에서 또는 Ollama 이슈 해결 후 pipeline-eval로 수정 2건 검증 (domain ≤49, posting 질문 ≥6) → IDEAS를 done으로, (2) 재분석 정리 버그 수정, (3) VPS 배포 (SSH 접속 정보 필요)
 
 ### 2026-07-07 — 운영 대비 DB 설계 방침 + 공개 준비 점검
 

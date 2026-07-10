@@ -60,7 +60,12 @@ export const analysisSchema = z.object({
       why: z.string(),
     })
   ),
-  interview: z.array(
+});
+export type Analysis = z.infer<typeof analysisSchema>;
+
+// 면접 질문은 별도 호출로 분리 — 분석 호출 하나에 몰면 로컬 8B 모델이 질문 수를 크게 줄인다
+export const interviewSchema = z.object({
+  questions: z.array(
     z.object({
       question: z.string(),
       qtype: z.enum(["posting", "weakness"]),
@@ -73,7 +78,7 @@ export const analysisSchema = z.object({
     })
   ),
 });
-export type Analysis = z.infer<typeof analysisSchema>;
+export type Interview = z.infer<typeof interviewSchema>;
 
 export const verificationSchema = z.object({
   results: z.array(

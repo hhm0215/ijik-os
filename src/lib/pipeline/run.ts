@@ -16,8 +16,10 @@ import { generateStructured } from "@/lib/llm";
 import {
   analysisSchema,
   extractionSchema,
+  interviewSchema,
   verificationSchema,
   type Analysis,
+  type Interview,
 } from "./schemas";
 
 type Card = typeof experienceCards.$inferSelect;
@@ -89,7 +91,7 @@ export async function runPipeline(postingId: number): Promise<void> {
         .get()
     );
 
-    // 2) 매칭 + 적합도 + 초안 + 되묻기 + 면접 질문 (경험 카드 기반)
+    // 2) 매칭 + 적합도 + 초안 + 되묻기 (경험 카드 기반)
     const reqList = reqRows
       .map((r, i) => `${i}. [${r.category}] ${r.text}`)
       .join("\n");
@@ -102,12 +104,11 @@ ${AUTHORSHIP_RULE}
 
 작업:
 1. matches: 각 요구사항(requirementIndex)에 근거가 되는 카드를 연결. 근거 강도는 strong(직접 경험)/medium(유사 경험)/weak(간접·부분 경험). 근거 없는 요구사항은 matches에 넣지 않는다.
-2. fit: 카테고리별 0~100 점수(근거 강도 기반)와 overall(단순 평균). 근거 없는 카테고리는 낮게.
+2. fit: 카테고리별 0~100 점수와 overall(단순 평균). 채점 규칙 — strong 근거 위주면 80~100, medium 위주면 50~79, weak뿐이면 20~49, 근거 없으면 0~19. 단, 요구사항이 어떤 카드의 "주장하면 안 되는 것"에 해당하면 그 요구사항은 근거 없음으로 취급하고 해당 카테고리를 감점한다 (예: 공고가 결제 도메인을 요구하는데 카드가 결제 경험 주장을 금지하면 domain은 49를 넘을 수 없다).
 3. verdict: "지원 가치 있음 — 단, X 보강 필요" 같은 판정 한 줄.
 4. introDraft: 지원 동기/자기소개 초안. 문장 단위로, 각 문장에 primaryCardId(필수)와 additionalCardIds. strong/medium 근거만 문장 생성, weak 근거 문장은 weakEvidence=true. 근거 없는 요구사항은 문장을 만들지 않는다. 사용자의 "증거 문장" 말투를 살려서.
 5. resumePoints: 이 공고에 맞춰 이력서에서 강조할 bullet 후보. 각각 primaryCardId 필수.
-6. askbacks: 근거가 없거나 약한 요구사항마다 사용자에게 되물을 질문. why에는 어떤 요구사항 때문인지. requirementIndex 연결(일반 질문이면 null).
-7. interview: 공고 기반 예상 질문 최대 10개(qtype=posting) + 약점 질문 3개(qtype=weakness, 근거가 부족해 보이는 부분을 면접관이 찌른다면). answerPoints의 각 bullet은 근거 카드 cardId 필수 — 카드에 근거가 없으면 cardId=null로 두고 text에는 "준비 필요: (무엇을 준비할지)"만 쓴다.`,
+6. askbacks: 근거가 없거나 약한 요구사항마다 사용자에게 되물을 질문. why에는 어떤 요구사항 때문인지. requirementIndex 연결(일반 질문이면 null).`,
       user: `## 채용 공고: ${extraction.title} (${extraction.company})
 
 ## 요구사항 목록
@@ -121,7 +122,47 @@ ${serializeCards(cards)}`,
     const validCardIds = new Set(cards.map((c) => c.id));
     const sane = sanitize(analysis, validCardIds, reqRows.length);
 
-    // 3) 정합성 2차 검증 — 생성 문장이 출처 카드의 "주장해도 되는 것" 범위 안인가
+    // 3) 면접 질문 — 별도 호출 (분석 호출에 합치면 로컬 모델이 질문 수를 크게 줄인다)
+    const matchSummary = reqRows
+      .map((r, i) => {
+        const ms = sane.matches.filter((m) => m.requirementIndex === i);
+        const evidence = ms.length
+          ? ms.map((m) => `카드 #${m.cardId}(${m.strength})`).join(", ")
+          : "근거 없음";
+        return `${i}. [${r.category}] ${r.text} — 근거: ${evidence}`;
+      })
+      .join("\n");
+    const interview = await generateStructured({
+      schema: interviewSchema,
+      maxTokens: 12000,
+      system: `면접 준비 조수. 채용 공고와 지원자의 경험 카드를 바탕으로 예상 면접 질문과 답변 포인트를 만든다. 모든 출력은 한국어.
+
+${AUTHORSHIP_RULE}
+
+작업:
+1. 공고 기반 예상 질문(qtype=posting)을 반드시 6개 이상, 최대 10개. 요구사항 목록을 골고루 커버할 것.
+2. 약점 질문(qtype=weakness) 정확히 3개 — 근거가 없거나 weak인 요구사항을 면접관이 찌른다면 무엇을 물을지.
+3. 각 질문의 answerPoints: 근거 카드 cardId 필수. 카드에 근거가 없으면 cardId=null로 두고 text에는 "준비 필요: (무엇을 준비할지)"만 쓴다.`,
+      user: `## 채용 공고: ${extraction.title} (${extraction.company})
+
+## 요구사항과 근거 현황
+${matchSummary}
+
+## 내 경험 카드
+${serializeCards(cards)}`,
+    });
+    const saneInterview: Interview["questions"] = interview.questions.map(
+      (q) => ({
+        ...q,
+        answerPoints: q.answerPoints.map((p) =>
+          p.cardId !== null && !validCardIds.has(p.cardId)
+            ? { ...p, cardId: null, text: `준비 필요: ${p.text}` }
+            : p
+        ),
+      })
+    );
+
+    // 4) 정합성 2차 검증 — 생성 문장이 출처 카드의 "주장해도 되는 것" 범위 안인가
     const sentencesToVerify = [
       ...sane.introDraft.map((s) => ({ text: s.text, cardId: s.primaryCardId })),
       ...sane.resumePoints.map((s) => ({ text: s.text, cardId: s.primaryCardId })),
@@ -145,8 +186,8 @@ ${sentencesToVerify.map((s, i) => `${i}. [카드 #${s.cardId}] ${s.text}`).join(
       );
     }
 
-    // 4) 저장
-    persist(postingId, reqRows, sane, overClaims);
+    // 5) 저장
+    persist(postingId, reqRows, sane, saneInterview, overClaims);
 
     db.update(jobPostings)
       .set({
@@ -203,14 +244,6 @@ function sanitize(
           ? a.requirementIndex
           : null,
     })),
-    interview: analysis.interview.map((q) => ({
-      ...q,
-      answerPoints: q.answerPoints.map((p) =>
-        p.cardId !== null && !validCardIds.has(p.cardId)
-          ? { ...p, cardId: null, text: `준비 필요: ${p.text}` }
-          : p
-      ),
-    })),
   };
 }
 
@@ -218,6 +251,7 @@ function persist(
   postingId: number,
   reqRows: (typeof requirements.$inferSelect)[],
   sane: Analysis,
+  interview: Interview["questions"],
   overClaims: Set<number>
 ): void {
   for (const m of sane.matches) {
@@ -310,7 +344,7 @@ function persist(
       .run();
   });
 
-  sane.interview.forEach((q, qi) => {
+  interview.forEach((q, qi) => {
     const question = db
       .insert(interviewQuestions)
       .values({
