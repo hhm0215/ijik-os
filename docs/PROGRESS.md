@@ -5,11 +5,18 @@
 ## 현재 상태
 
 - **단계:** 1.5단계 (품질 안정화) — 로드맵은 [PLAN.md](./PLAN.md) §6
-- **다음 마일스톤:** 품질 수정 2건 E2E 검증 완료 → VPS 배포 (RAM 8GB 확인됨, Ollama 유지·Claude API 안 씀) → 실사용
-- **차단 요소:** Windows 로컬에서 Ollama 구조화 출력 오류로 E2E 검증 불가 (IDEAS 참고). Mac에서 검증하거나 이슈 해결 필요
+- **다음 마일스톤:** VPS 배포 (RAM 8GB 확인됨, Ollama 유지·Claude API 안 씀) → 실사용. 단, ijik-api 배포 마무리(DNS→Nginx→HTTPS)가 먼저 — 같은 서버·같은 패턴이라 순서상 선행 (전체 로드맵은 PLAN.md 결정 로그 2026-07-10 참고)
+- **차단 요소:** 없음 (품질 수정 2건 검증 완료, 중복 버그 수정됨). Windows에서 개발 시에만 Ollama 구조화 출력 이슈 잔존 — 버전 업그레이드로 해결 시도 (IDEAS 참고)
 - **실행 방법:** `npm run dev` (Mac: Ollama brew 서비스 / Windows: Ollama 앱)
 
 ## 세션 로그
+
+### 2026-07-12 — Mac E2E 검증 완료 + 재분석 중복 누적 버그 수정 (커밋 6a39ea9, feb2e3e)
+
+- 한 것: (1) Windows에서 보류됐던 품질 수정 2건을 pipeline-eval로 검증 — 적합도 감점 규칙 작동(domain 100→중복 오염 상태에서 0, 정리 후 45로 notClaimable ≤49 규칙 안), 면접 질문 분리 호출 작동(6→13개). (2) 재분석 중복 누적 버그 수정 — persist에서 기존 결과 삭제(FK cascade 활용)+신규 저장을 한 트랜잭션으로, requirements 사전 INSERT도 트랜잭션 안으로 이동
+- 확인된 것: 중복 상태(req 13)에서 재분석 → req 6으로 리셋, 고아 행 0, 불변식(출처 없는 AI 문장 0) 유지. 실패 안전성 실측 — Ollama 다운 상태에서 재분석 실패 시 이전 결과 완전 보존 (트랜잭션 설계 의도대로)
+- 발견된 이슈: (1) weakness 면접 질문 변동성 — 실행 간 3개→0개, 로컬 8B가 "정확히 3개" 지시를 간헐적으로 무시 (IDEAS open). (2) 직전 세션의 fit 과감점(domain 0, overall 37)은 중복 오염 영향이었을 가능성 — 정리 후 overall 65로 verdict와 정합
+- 다음: (1) ijik-api 서버 배포 마무리 (DNS A레코드 → Nginx → Certbot, ijik-api 저장소 docs/DEPLOY.md 5~9단계), (2) 그 다음 이 프로젝트 VPS 배포 (docs/DEPLOY.md), (3) weakness 질문 변동성 대응 (별도 호출 분리 or 개수 검증+재시도)
 
 ### 2026-07-11 — 품질 이슈 2건 수정 (Windows 새 환경, E2E 검증 보류)
 
