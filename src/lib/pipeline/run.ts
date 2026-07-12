@@ -83,16 +83,12 @@ export async function runPipeline(postingId: number): Promise<void> {
       .where(eq(jobPostings.id, postingId))
       .run();
 
-    const reqRows = extraction.requirements.map((r) =>
-      db
-        .insert(requirements)
-        .values({ jobPostingId: postingId, category: r.category, text: r.text })
-        .returning()
-        .get()
-    );
+    // 요구사항은 아직 DB에 넣지 않는다 — 저장은 persist에서 기존 결과 삭제와
+    // 한 트랜잭션으로 처리 (재분석 시 중복 누적 방지 + 실패 시 이전 결과 보존)
+    const reqDefs = extraction.requirements;
 
     // 2) 매칭 + 적합도 + 초안 + 되묻기 (경험 카드 기반)
-    const reqList = reqRows
+    const reqList = reqDefs
       .map((r, i) => `${i}. [${r.category}] ${r.text}`)
       .join("\n");
     const analysis = await generateStructured({
@@ -120,10 +116,10 @@ ${serializeCards(cards)}`,
 
     // LLM이 존재하지 않는 카드 ID를 만들어냈을 가능성 차단
     const validCardIds = new Set(cards.map((c) => c.id));
-    const sane = sanitize(analysis, validCardIds, reqRows.length);
+    const sane = sanitize(analysis, validCardIds, reqDefs.length);
 
     // 3) 면접 질문 — 별도 호출 (분석 호출에 합치면 로컬 모델이 질문 수를 크게 줄인다)
-    const matchSummary = reqRows
+    const matchSummary = reqDefs
       .map((r, i) => {
         const ms = sane.matches.filter((m) => m.requirementIndex === i);
         const evidence = ms.length
@@ -186,8 +182,8 @@ ${sentencesToVerify.map((s, i) => `${i}. [카드 #${s.cardId}] ${s.text}`).join(
       );
     }
 
-    // 5) 저장
-    persist(postingId, reqRows, sane, saneInterview, overClaims);
+    // 5) 저장 — 기존 결과 삭제 + 신규 저장을 한 트랜잭션으로
+    persist(postingId, reqDefs, sane, saneInterview, overClaims);
 
     db.update(jobPostings)
       .set({
@@ -249,122 +245,146 @@ function sanitize(
 
 function persist(
   postingId: number,
-  reqRows: (typeof requirements.$inferSelect)[],
+  reqDefs: { category: string; text: string }[],
   sane: Analysis,
   interview: Interview["questions"],
   overClaims: Set<number>
 ): void {
-  for (const m of sane.matches) {
-    db.insert(matches)
-      .values({
-        requirementId: reqRows[m.requirementIndex].id,
-        cardId: m.cardId,
-        strength: m.strength,
-        rationale: m.rationale,
-      })
+  db.transaction((tx) => {
+    // 재분석 시 이전 결과 정리 — 삭제와 신규 저장이 같은 트랜잭션이므로
+    // 중간 실패 시 이전 결과가 그대로 남는다 (중복 누적 방지, IDEAS 2026-07-11)
+    // cascade: requirements→matches, drafts→sentences→sources, questions→answer_points
+    tx.delete(requirements)
+      .where(eq(requirements.jobPostingId, postingId))
       .run();
-  }
-
-  const askbackIdByReq = new Map<number, number>();
-  for (const a of sane.askbacks) {
-    const row = db
-      .insert(askbacks)
-      .values({
-        jobPostingId: postingId,
-        requirementId:
-          a.requirementIndex !== null ? reqRows[a.requirementIndex].id : null,
-        question: a.question,
-        why: a.why,
-      })
-      .returning()
-      .get();
-    if (a.requirementIndex !== null)
-      askbackIdByReq.set(a.requirementIndex, row.id);
-  }
-
-  // 지원 초안 — 근거 없는 요구사항 자리는 placeholder 행으로
-  const introDraft = db
-    .insert(drafts)
-    .values({ jobPostingId: postingId, kind: "intro" })
-    .returning()
-    .get();
-  let order = 0;
-  let verifyIdx = 0;
-  for (const s of sane.introDraft) {
-    const sentence = db
-      .insert(draftSentences)
-      .values({
-        draftId: introDraft.id,
-        orderIdx: order++,
-        text: s.text,
-        type: "ai",
-        primarySourceCardId: s.primaryCardId,
-        warning: overClaims.has(verifyIdx)
-          ? "over_claim"
-          : s.weakEvidence
-            ? "weak_evidence"
-            : null,
-      })
-      .returning()
-      .get();
-    verifyIdx++;
-    for (const extra of s.additionalCardIds) {
-      db.insert(draftSentenceSources)
-        .values({ sentenceId: sentence.id, cardId: extra })
-        .run();
-    }
-  }
-  for (const [reqIdx, askbackId] of askbackIdByReq) {
-    db.insert(draftSentences)
-      .values({
-        draftId: introDraft.id,
-        orderIdx: order++,
-        text: `"${reqRows[reqIdx].text}" 요구사항은 근거 카드가 없어 문장을 생성하지 않았습니다. 되묻기에 답하면 이 자리가 채워집니다.`,
-        type: "placeholder",
-        askbackId,
-      })
+    tx.delete(askbacks).where(eq(askbacks.jobPostingId, postingId)).run();
+    tx.delete(drafts).where(eq(drafts.jobPostingId, postingId)).run();
+    tx.delete(interviewQuestions)
+      .where(eq(interviewQuestions.jobPostingId, postingId))
       .run();
-  }
 
-  const resumeDraft = db
-    .insert(drafts)
-    .values({ jobPostingId: postingId, kind: "resume_points" })
-    .returning()
-    .get();
-  sane.resumePoints.forEach((s, i) => {
-    db.insert(draftSentences)
-      .values({
-        draftId: resumeDraft.id,
-        orderIdx: i,
-        text: s.text,
-        type: "ai",
-        primarySourceCardId: s.primaryCardId,
-        warning: overClaims.has(sane.introDraft.length + i) ? "over_claim" : null,
-      })
-      .run();
-  });
+    const reqRows = reqDefs.map((r) =>
+      tx
+        .insert(requirements)
+        .values({ jobPostingId: postingId, category: r.category, text: r.text })
+        .returning()
+        .get()
+    );
 
-  interview.forEach((q, qi) => {
-    const question = db
-      .insert(interviewQuestions)
-      .values({
-        jobPostingId: postingId,
-        question: q.question,
-        qtype: q.qtype,
-        orderIdx: qi,
-      })
-      .returning()
-      .get();
-    q.answerPoints.forEach((p, pi) => {
-      db.insert(interviewAnswerPoints)
+    for (const m of sane.matches) {
+      tx.insert(matches)
         .values({
-          questionId: question.id,
-          orderIdx: pi,
-          text: p.text,
-          type: p.cardId === null ? "placeholder" : "ai",
-          primarySourceCardId: p.cardId,
+          requirementId: reqRows[m.requirementIndex].id,
+          cardId: m.cardId,
+          strength: m.strength,
+          rationale: m.rationale,
         })
         .run();
+    }
+
+    const askbackIdByReq = new Map<number, number>();
+    for (const a of sane.askbacks) {
+      const row = tx
+        .insert(askbacks)
+        .values({
+          jobPostingId: postingId,
+          requirementId:
+            a.requirementIndex !== null ? reqRows[a.requirementIndex].id : null,
+          question: a.question,
+          why: a.why,
+        })
+        .returning()
+        .get();
+      if (a.requirementIndex !== null)
+        askbackIdByReq.set(a.requirementIndex, row.id);
+    }
+
+    // 지원 초안 — 근거 없는 요구사항 자리는 placeholder 행으로
+    const introDraft = tx
+      .insert(drafts)
+      .values({ jobPostingId: postingId, kind: "intro" })
+      .returning()
+      .get();
+    let order = 0;
+    let verifyIdx = 0;
+    for (const s of sane.introDraft) {
+      const sentence = tx
+        .insert(draftSentences)
+        .values({
+          draftId: introDraft.id,
+          orderIdx: order++,
+          text: s.text,
+          type: "ai",
+          primarySourceCardId: s.primaryCardId,
+          warning: overClaims.has(verifyIdx)
+            ? "over_claim"
+            : s.weakEvidence
+              ? "weak_evidence"
+              : null,
+        })
+        .returning()
+        .get();
+      verifyIdx++;
+      for (const extra of s.additionalCardIds) {
+        tx.insert(draftSentenceSources)
+          .values({ sentenceId: sentence.id, cardId: extra })
+          .run();
+      }
+    }
+    for (const [reqIdx, askbackId] of askbackIdByReq) {
+      tx.insert(draftSentences)
+        .values({
+          draftId: introDraft.id,
+          orderIdx: order++,
+          text: `"${reqRows[reqIdx].text}" 요구사항은 근거 카드가 없어 문장을 생성하지 않았습니다. 되묻기에 답하면 이 자리가 채워집니다.`,
+          type: "placeholder",
+          askbackId,
+        })
+        .run();
+    }
+
+    const resumeDraft = tx
+      .insert(drafts)
+      .values({ jobPostingId: postingId, kind: "resume_points" })
+      .returning()
+      .get();
+    sane.resumePoints.forEach((s, i) => {
+      tx.insert(draftSentences)
+        .values({
+          draftId: resumeDraft.id,
+          orderIdx: i,
+          text: s.text,
+          type: "ai",
+          primarySourceCardId: s.primaryCardId,
+          warning: overClaims.has(sane.introDraft.length + i)
+            ? "over_claim"
+            : null,
+        })
+        .run();
+    });
+
+    interview.forEach((q, qi) => {
+      const question = tx
+        .insert(interviewQuestions)
+        .values({
+          jobPostingId: postingId,
+          question: q.question,
+          qtype: q.qtype,
+          orderIdx: qi,
+        })
+        .returning()
+        .get();
+      q.answerPoints.forEach((p, pi) => {
+        tx.insert(interviewAnswerPoints)
+          .values({
+            questionId: question.id,
+            orderIdx: pi,
+            text: p.text,
+            type: p.cardId === null ? "placeholder" : "ai",
+            primarySourceCardId: p.cardId,
+          })
+          .run();
+      });
     });
   });
 }
