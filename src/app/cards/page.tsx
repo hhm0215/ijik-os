@@ -20,12 +20,15 @@ export default function CardsPage() {
           <h1 className="mt-2 text-[28px] font-black tracking-[-0.05em]">내 경험의 원본 보관함</h1>
           <p className="mt-3 max-w-2xl text-[13px] leading-6 text-[#718078]">AI가 지원 자료를 만들 때 사용할 사실의 원본이에요. 프로젝트 하나, 문제 해결 하나처럼 카드마다 한 경험을 구체적으로 기록하세요.</p>
         </div>
-        <Link
-          href="/cards/new"
-          className="shrink-0 rounded-xl bg-[#167b57] px-5 py-3 text-[13px] font-bold text-white shadow-[0_8px_22px_rgba(22,123,87,.2)] hover:-translate-y-0.5 hover:bg-[#0e6949]"
-        >
-          + 새 경험 카드 만들기
-        </Link>
+        <div className="flex shrink-0 flex-wrap gap-2">
+          <Link href="/cards/import" className="rounded-xl border border-[#d7e3dc] bg-white px-5 py-3 text-[13px] font-bold text-[#4d6558] hover:border-[#9ccbb5] hover:text-[#167b57]">⇧ 문서에서 가져오기</Link>
+          <Link
+            href="/cards/new"
+            className="rounded-xl bg-[#167b57] px-5 py-3 text-[13px] font-bold text-white shadow-[0_8px_22px_rgba(22,123,87,.2)] hover:-translate-y-0.5 hover:bg-[#0e6949]"
+          >
+            + 직접 작성
+          </Link>
+        </div>
       </section>
       {cards.length === 0 && (
         <section className="surface grid min-h-72 place-items-center border-dashed p-8 text-center">

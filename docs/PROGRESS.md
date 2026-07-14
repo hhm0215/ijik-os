@@ -5,11 +5,18 @@
 ## 현재 상태
 
 - **단계:** 1.5단계 (품질 안정화) — 로드맵은 [PLAN.md](./PLAN.md) §6
-- **다음 마일스톤:** 로컬에서 1.5단계 품질을 실제 공고로 확인한 뒤 VPS에 배포하여 본인 실사용을 시작한다. VPS는 개발 환경이 아니며, 로컬 `lint`·`build`·Ollama E2E를 통과한 커밋만 배포한다. `ijik-api` HTTPS 배포는 완료됨.
+- **다음 마일스톤:** Windows 또는 Mac 로컬에서 실제 문서로 경험 카드를 만들고 실제 공고 분석 흐름을 검증한다. 이후 적합도 과대평가를 보정한 뒤 VPS 개인 실사용 릴리스를 판단한다.
 - **차단 요소:** 없음 (품질 수정 2건 검증 완료, 중복 버그 수정됨). Windows에서 개발 시에만 Ollama 구조화 출력 이슈 잔존 — 버전 업그레이드로 해결 시도 (IDEAS 참고)
 - **실행 방법:** `npm run dev` (Mac: Ollama brew 서비스 / Windows: Ollama 앱)
 
 ## 세션 로그
+
+### 2026-07-14 — 목 데이터 초기화 + 문서 기반 경험 카드 가져오기 + Windows 인수인계
+
+- 한 것: 로컬 SQLite의 목 경험 카드 2장·공고 1건과 모든 연관 분석 결과를 삭제했다. PDF/DOCX/TXT/MD 또는 붙여넣은 문서에서 경험 후보를 추출하고, 원문 근거·검토 필드를 보며 수정/선택한 카드만 저장하는 `/cards/import` 흐름을 추가했다. `docs/WINDOWS.md`에 Windows 환경 준비, Ollama 버전 주의, 세션 시작 문서, 데이터 이동 규칙을 정리했다.
+- 확인된 것: 삭제 후 cards/postings/requirements/drafts/interview 모두 0건. `npm run lint`, `npm run build` 통과하고 `/api/cards/import`, `/cards/import` 라우트가 빌드에 포함됐다. 짧은 입력의 400 검증과 가져오기 요청이 DB에 데이터를 자동 저장하지 않는 것(카드·공고 0건 유지)을 확인했다.
+- 발견된 이슈: 장시간 Ollama 요청의 최종 후보 JSON이 현재 터미널 세션에서 유실돼 실제 문서 후보의 화면 검토는 Windows/브라우저 수동 테스트로 남는다. Windows Ollama 0.13.1의 구조화 출력 문제 때문에 0.31 이상 업데이트가 필요하다. Next 내부 PostCSS moderate audit 경고 2건은 호환 패치 대기 상태다.
+- 다음: Windows에서 `git pull`→`npm ci`→Ollama 최신 버전 확인 후 실제 이력서/자소서/포트폴리오 하나를 업로드해 후보 수정·선택·저장까지 검증한다. 이후 실제 공고 분석과 적합도 보정 작업으로 이어간다.
 
 ### 2026-07-14 — 전체 UI·UX 디자인 개편
 

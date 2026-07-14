@@ -61,7 +61,9 @@ export default function Home() {
                 <Link href="/cards/new" className="rounded-xl bg-[#167b57] px-5 py-3 text-[13px] font-bold text-white shadow-[0_8px_22px_rgba(22,123,87,.22)] hover:-translate-y-0.5 hover:bg-[#0e6949]">
                   첫 경험 카드 작성하기 →
                 </Link>
-                <span className="text-[12px] text-[#7b8780]">가장 자신 있는 경험 하나면 충분해요</span>
+                <Link href="/cards/import" className="rounded-xl border border-[#d7e3dc] bg-white px-5 py-3 text-[13px] font-bold text-[#4d6558] hover:border-[#9ccbb5] hover:text-[#167b57]">
+                  문서에서 빠르게 만들기
+                </Link>
               </div>
             ) : (
               <div className="mt-6 flex items-center gap-3 text-[12px] font-semibold text-[#527064]">

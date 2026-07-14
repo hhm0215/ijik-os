@@ -30,7 +30,7 @@ Claude API 키가 있으면 `.env.local`에 `ANTHROPIC_API_KEY`를 넣으세요 
 
 ## 사용 흐름
 
-1. **경험 뱅크**에 경험 카드를 작성한다 (상황/역할/행동/수치/주장해도 되는 것).
+1. **경험 뱅크**에 직접 카드를 작성하거나, 이력서·자소서·포트폴리오 문서에서 경험 후보를 가져온다.
 2. **공고 피드**에서 채용 공고 본문을 붙여넣는다 → 분석 시작 (1~3분).
 3. **공고 상세**에서 확인: 요구사항 분해+매칭 / 적합도 breakdown+출처 달린 초안 / 되묻기 질문.
 4. 되묻기에 답하면 새 경험 카드로 저장 → "다시 분석"하면 초안에 반영.
@@ -57,5 +57,6 @@ docker compose exec ollama ollama pull qwen3:8b
 
 - [docs/PLAN.md](docs/PLAN.md) — 비전, 설계 원칙, 로드맵, 결정 로그
 - [docs/DEPLOY.md](docs/DEPLOY.md) — VPS 배포 가이드
+- [docs/WINDOWS.md](docs/WINDOWS.md) — Windows에서 최신 세션 이어서 개발하기
 - [docs/HARNESS.md](docs/HARNESS.md) — 이 프로젝트를 교재로 한 AI 하네스 엔지니어링 학습 노트
 - `AGENTS.md` — AI 협업 규칙 (Claude Code용 컨텍스트), `IDEAS.md` — 아이디어/피드백 큐
