@@ -16,8 +16,9 @@ import { generateStructured } from "@/lib/llm";
 import {
   analysisSchema,
   extractionSchema,
-  interviewSchema,
+  postingInterviewSchema,
   verificationSchema,
+  weaknessInterviewSchema,
   type Analysis,
   type Interview,
 } from "./schemas";
@@ -118,7 +119,8 @@ ${serializeCards(cards)}`,
     const validCardIds = new Set(cards.map((c) => c.id));
     const sane = sanitize(analysis, validCardIds, reqDefs.length);
 
-    // 3) 면접 질문 — 별도 호출 (분석 호출에 합치면 로컬 모델이 질문 수를 크게 줄인다)
+    // 3) 면접 질문 — posting/weakness를 분리한다. 로컬 8B 모델은 한 호출에서
+    // weakness 3개를 함께 요구하면 간헐적으로 생략하므로, 각각 스키마로 개수를 강제한다.
     const matchSummary = reqDefs
       .map((r, i) => {
         const ms = sane.matches.filter((m) => m.requirementIndex === i);
@@ -128,26 +130,31 @@ ${serializeCards(cards)}`,
         return `${i}. [${r.category}] ${r.text} — 근거: ${evidence}`;
       })
       .join("\n");
-    const interview = await generateStructured({
-      schema: interviewSchema,
-      maxTokens: 12000,
-      system: `면접 준비 조수. 채용 공고와 지원자의 경험 카드를 바탕으로 예상 면접 질문과 답변 포인트를 만든다. 모든 출력은 한국어.
-
-${AUTHORSHIP_RULE}
-
-작업:
-1. 공고 기반 예상 질문(qtype=posting)을 반드시 6개 이상, 최대 10개. 요구사항 목록을 골고루 커버할 것.
-2. 약점 질문(qtype=weakness) 정확히 3개 — 근거가 없거나 weak인 요구사항을 면접관이 찌른다면 무엇을 물을지.
-3. 각 질문의 answerPoints: 근거 카드 cardId 필수. 카드에 근거가 없으면 cardId=null로 두고 text에는 "준비 필요: (무엇을 준비할지)"만 쓴다.`,
-      user: `## 채용 공고: ${extraction.title} (${extraction.company})
+    const interviewContext = `## 채용 공고: ${extraction.title} (${extraction.company})
 
 ## 요구사항과 근거 현황
 ${matchSummary}
 
 ## 내 경험 카드
-${serializeCards(cards)}`,
+${serializeCards(cards)}`;
+
+    const postingInterview = await generateStructured({
+      schema: postingInterviewSchema,
+      maxTokens: 8000,
+      system: `면접 준비 조수. 채용 공고와 지원자의 경험 카드를 바탕으로 공고 기반 예상 면접 질문과 답변 포인트를 만든다. 모든 출력은 한국어.
+
+${AUTHORSHIP_RULE}
+
+작업:
+1. 공고 기반 예상 질문(qtype=posting)을 반드시 6개 이상, 최대 10개. 요구사항 목록을 골고루 커버할 것.
+2. 각 질문의 answerPoints: 근거 카드 cardId 필수. 카드에 근거가 없으면 cardId=null로 두고 text에는 "준비 필요: (무엇을 준비할지)"만 쓴다.`,
+      user: interviewContext,
     });
-    const saneInterview: Interview["questions"] = interview.questions.map(
+    const weaknessInterview = await generateWeaknessInterview(interviewContext);
+    const saneInterview: Interview["questions"] = [
+      ...postingInterview.questions,
+      ...weaknessInterview.questions,
+    ].map(
       (q) => ({
         ...q,
         answerPoints: q.answerPoints.map((p) =>
@@ -204,6 +211,38 @@ ${sentencesToVerify.map((s, i) => `${i}. [카드 #${s.cardId}] ${s.text}`).join(
       .run();
     throw e;
   }
+}
+
+async function generateWeaknessInterview(
+  interviewContext: string
+): Promise<{ questions: Interview["questions"] }> {
+  let lastError: unknown;
+
+  // JSON 스키마의 정확히 3개 제약을 통과하지 못한 출력만 한 번 재시도한다.
+  // 계속 실패하면 분석 전체를 저장하지 않아 이전 분석 결과가 보존된다.
+  for (let attempt = 1; attempt <= 2; attempt += 1) {
+    try {
+      return await generateStructured({
+        schema: weaknessInterviewSchema,
+        maxTokens: 4000,
+        system: `면접 준비 조수. 채용 공고와 지원자의 경험 카드를 바탕으로 약점 면접 질문과 답변 포인트를 만든다. 모든 출력은 한국어.
+
+${AUTHORSHIP_RULE}
+
+작업:
+1. 근거가 없거나 weak인 요구사항을 면접관이 찌르는 약점 질문(qtype=weakness)을 정확히 3개 만든다.
+2. 세 질문은 가능한 한 서로 다른 부족한 요구사항을 다룬다.
+3. 각 질문의 answerPoints: 근거 카드가 있으면 cardId를 넣는다. 카드에 근거가 없으면 cardId=null로 두고 text에는 "준비 필요: (무엇을 준비할지)"만 쓴다.`,
+        user: interviewContext,
+      });
+    } catch (error) {
+      lastError = error;
+    }
+  }
+
+  throw new Error(
+    `약점 면접 질문 3개 생성에 두 번 실패했습니다. ${lastError instanceof Error ? lastError.message : String(lastError)}`
+  );
 }
 
 function sanitize(

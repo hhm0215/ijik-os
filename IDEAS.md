@@ -13,10 +13,10 @@ _(아직 없음 — MVP 사용 후 기록)_
 
 - [done] (2026-07-11) 적합도 점수 인플레이션: 채점 프롬프트에 근거 강도별 점수 구간 + notClaimable 감점 규칙 명시로 수정. Mac E2E 검증 통과 — 공고 2 재분석에서 domain 100→0 (notClaimable "결제 도메인" 감점 작동), overall 89→37. 후속 관찰은 아래 루브릭 튜닝 항목
 - [done] (2026-07-11) 면접 질문이 3개만 생성됨 → 별도 LLM 호출로 분리(파이프라인 4호출) + "posting 최소 6개, weakness 정확히 3개" 명시. Mac E2E 검증 통과 — 6개(3/3) → 13개(posting 10, weakness 3)
-- [open] (2026-07-11) **감점 후 점수-판정 정합성**: 수정 후 overall 37인데 verdict는 여전히 "지원 가치 있음". domain 0·impact 0으로 과감점됐을 가능성도 (100→0 스윙, 중간값 없음). 루브릭 튜닝(아이디어 백로그의 기존 항목)과 함께 실제 공고 여러 개로 보정 필요
+- [open] (2026-07-11, 2026-07-14 재확인) **감점 후 점수-판정 정합성**: `not_claimable`에 "결제 도메인 전문성"을 명시한 카드로 공고 #2를 재분석했는데 domain 90 / overall 95가 나왔다. 프롬프트의 "domain은 49 초과 불가" 지시만으로는 안정적이지 않다. verdict와 점수 모두 과대평가될 수 있으므로, 관련 요구사항·카드의 notClaimable을 코드에서 판별할 수 있는 규칙 또는 2차 점수 보정 방식을 설계해야 한다.
 - [open] (2026-07-11) **Windows Ollama 0.13.1에서 구조화 출력 실패**: 대형 스키마(analysisSchema) 호출 시 `failed to load model vocabulary required for format` + 서버 로그 `error parsing grammar: unexpected end of input`. 작은 스키마(추출)는 성공. Mac(0.31.1)에서는 재현 안 됨 — Windows Ollama 버전 업그레이드로 해결 시도가 1순위
 - [done] (2026-07-12) **재분석 시 이전 결과 미정리 버그 수정**: persist에서 기존 결과 삭제(requirements/askbacks/drafts/interview, 자식은 FK cascade) + 신규 저장을 한 트랜잭션으로. requirements 사전 INSERT도 트랜잭션 안으로 이동. E2E 검증 — 중복 상태(req 13)에서 재분석 → req 6/matches 6/drafts 2로 리셋, 고아 행 0, 불변식 유지. 부수 효과 검증됨: LLM 호출 중 실패 시(Ollama 다운 케이스 실측) 이전 결과 완전 보존
-- [open] (2026-07-12) **면접 질문 weakness 미생성 변동성**: 같은 프롬프트로 실행 간 posting 10/weakness 3 → posting 7/weakness 0. "weakness 정확히 3개" 지시를 로컬 8B가 간헐적으로 무시. qtype은 zod enum이라 스키마 문제 아님. 대응 후보: weakness 질문을 또 별도 호출로 분리, 또는 생성 후 개수 검증+재시도
+- [done] (2026-07-14) **면접 질문 weakness 미생성 변동성**: posting/weakness 질문을 별도 Ollama 호출과 각각의 개수 스키마로 분리했다. weakness는 정확히 3개 스키마를 통과하지 못하면 한 번 재시도하고, 계속 실패하면 이전 분석 결과를 보존한다. 공고 #2 E2E 결과 posting 10개 / weakness 3개, 출처 없는 AI 답변 포인트 0건.
 - (2026-07-12) 관찰: 중복 오염 제거 후 재분석에서 fit이 tech 95/domain 45/collab 65/impact 60/overall 65 — domain이 "notClaimable이면 49 초과 불가" 규칙 안(45)에 정확히 들어왔고 verdict("지원 가치 있음")와 점수(65)의 정합성도 자연스러움. 직전 관찰(domain 0, overall 37 vs 긍정 verdict)은 중복 입력 오염 영향이었을 가능성. 루브릭 튜닝 항목은 실제 공고 추가 후 재평가
 - 잘 되는 것: 요구사항 분해/분류 정확, weak 근거 → 되묻기 생성, over_claim 검증이 실제로 과장 문장을 잡아냄, 출처 없는 AI 문장 0건. 분석 1회 약 6분 (첫 로딩 포함)
 

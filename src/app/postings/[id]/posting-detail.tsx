@@ -97,7 +97,12 @@ export default function PostingDetail({ postingId }: { postingId: number }) {
   }, [postingId]);
 
   useEffect(() => {
-    load();
+    // 초기 요청도 effect 본문이 아닌 비동기 작업으로 예약한다. 최신 React lint는
+    // effect에서 동기적으로 상태를 갱신하는 패턴을 금지한다.
+    const t = setTimeout(() => {
+      void load();
+    }, 0);
+    return () => clearTimeout(t);
   }, [load]);
 
   // 분석 중이면 5초마다 폴링
