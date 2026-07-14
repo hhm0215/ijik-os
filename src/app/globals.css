@@ -1,26 +1,107 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --ink: #17211b;
+  --muted: #66736c;
+  --line: #e4e9e6;
+  --brand: #167b57;
+  --brand-dark: #0e5f42;
+  color-scheme: light;
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+* {
+  box-sizing: border-box;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+html {
+  scroll-behavior: smooth;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  min-height: 100vh;
+  margin: 0;
+  background:
+    radial-gradient(circle at 8% 0%, rgba(201, 239, 220, 0.5), transparent 28rem),
+    radial-gradient(circle at 92% 12%, rgba(255, 232, 193, 0.38), transparent 24rem),
+    #f7f9f7;
+  color: var(--ink);
+  font-family: Pretendard, "Pretendard Variable", -apple-system, BlinkMacSystemFont,
+    "Segoe UI", sans-serif;
+  letter-spacing: -0.012em;
+}
+
+::selection {
+  background: #bcebd5;
+  color: #0d4b35;
+}
+
+button,
+a,
+input,
+textarea {
+  transition:
+    color 160ms ease,
+    background-color 160ms ease,
+    border-color 160ms ease,
+    box-shadow 160ms ease,
+    transform 160ms ease;
+}
+
+button:not(:disabled) {
+  cursor: pointer;
+}
+
+button:focus-visible,
+a:focus-visible,
+input:focus-visible,
+textarea:focus-visible {
+  outline: 3px solid rgba(22, 123, 87, 0.18);
+  outline-offset: 2px;
+}
+
+input,
+textarea {
+  color: var(--ink);
+}
+
+input::placeholder,
+textarea::placeholder {
+  color: #9aa59f;
+}
+
+.surface {
+  border: 1px solid rgba(226, 232, 228, 0.95);
+  border-radius: 22px;
+  background: rgba(255, 255, 255, 0.94);
+  box-shadow: 0 1px 2px rgba(17, 35, 26, 0.03), 0 14px 40px rgba(17, 35, 26, 0.05);
+}
+
+.field {
+  width: 100%;
+  border: 1px solid #dce3df;
+  border-radius: 13px;
+  background: #fbfcfb;
+  padding: 0.75rem 0.85rem;
+  font-size: 0.875rem;
+  line-height: 1.55;
+}
+
+.field:hover {
+  border-color: #becbc4;
+}
+
+.field:focus {
+  border-color: #238a65;
+  background: #fff;
+  box-shadow: 0 0 0 4px rgba(35, 138, 101, 0.09);
+  outline: none;
+}
+
+@keyframes soft-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.48; }
+}
+
+.soft-pulse {
+  animation: soft-pulse 1.8s ease-in-out infinite;
 }

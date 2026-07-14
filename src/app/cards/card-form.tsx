@@ -83,6 +83,24 @@ const FIELDS: {
   { key: "tags", label: "태그", hint: "쉼표 구분. 예: batch, 성능개선, MySQL" },
 ];
 
+const GROUPS: { title: string; description: string; keys: (keyof CardValues)[] }[] = [
+  {
+    title: "경험의 맥락",
+    description: "무슨 일이 있었고, 그 안에서 내가 맡은 부분을 적어요.",
+    keys: ["title", "situation", "role"],
+  },
+  {
+    title: "행동과 결과",
+    description: "내가 실제로 한 행동과 확인 가능한 결과를 남겨요.",
+    keys: ["action", "resultMetrics", "learned", "evidenceSentence"],
+  },
+  {
+    title: "AI 사용 경계",
+    description: "AI가 이 경험을 어디까지 활용해도 되는지 선을 정해요.",
+    keys: ["claimable", "notClaimable", "tags"],
+  },
+];
+
 export default function CardForm({
   cardId,
   initial,
@@ -123,63 +141,75 @@ export default function CardForm({
   }
 
   return (
-    <div className="mx-auto max-w-2xl rounded-md border border-neutral-200 bg-white p-6">
-      <h1 className="mb-4 text-[16px] font-bold">
-        {cardId ? `경험 카드 #${cardId} 수정` : "새 경험 카드"}
-      </h1>
-      {!cardId && (
-        <div className="mb-5 rounded border border-emerald-200 bg-emerald-50 p-3 text-[12px] text-emerald-950">
-          <strong>무엇을 적나요?</strong> 프로젝트·업무·문제 해결처럼 실제로 한 일 하나를 적으세요.
-          특히 <strong>내 역할</strong>, <strong>행동</strong>, <strong>결과 수치</strong>가 구체적일수록 공고 분석 결과가 좋아집니다.
-          AI는 아래의 “주장해도 되는 것” 범위를 넘는 문장을 만들지 않아요.
-        </div>
-      )}
-      <div className="space-y-4">
-        {FIELDS.map((f) => (
-          <div key={f.key}>
-            <label className="mb-1 block font-semibold">
-              {f.label}
-              {f.required && <span className="text-red-500"> *</span>}
-            </label>
-            <p className="mb-1 text-[12px] text-neutral-400">{f.hint}</p>
-            {f.textarea ? (
-              <textarea
-                value={values[f.key]}
-                onChange={(e) =>
-                  setValues({ ...values, [f.key]: e.target.value })
-                }
-                className="h-20 w-full resize-y rounded border border-neutral-300 p-2"
-              />
-            ) : (
-              <input
-                value={values[f.key]}
-                onChange={(e) =>
-                  setValues({ ...values, [f.key]: e.target.value })
-                }
-                className="w-full rounded border border-neutral-300 p-2"
-              />
-            )}
+    <div className="mx-auto max-w-4xl space-y-5">
+      <header className="surface overflow-hidden p-6 sm:p-8">
+        <div className="flex items-start gap-4">
+          <span className="grid size-11 shrink-0 place-items-center rounded-2xl bg-[#167b57] text-lg font-black text-white shadow-[0_8px_20px_rgba(22,123,87,.2)]">✦</span>
+          <div>
+            <p className="text-[10px] font-black tracking-[0.12em] text-[#167b57]">EXPERIENCE CARD</p>
+            <h1 className="mt-1 text-[24px] font-black tracking-[-0.045em]">
+              {cardId ? `경험 카드 #${cardId} 수정` : "새 경험을 기록해볼까요?"}
+            </h1>
+            <p className="mt-2 max-w-2xl text-[12px] leading-6 text-[#748078]">프로젝트·업무·문제 해결처럼 실제로 한 일 하나를 적으세요. 구체적으로 쓸수록 공고 분석 결과의 근거가 단단해집니다.</p>
           </div>
-        ))}
-      </div>
-      {error && <p className="mt-3 text-[12px] text-red-600">{error}</p>}
-      <div className="mt-5 flex gap-3">
+        </div>
+      </header>
+
+      {GROUPS.map((group, groupIndex) => (
+        <section key={group.title} className="surface grid gap-6 p-6 sm:p-8 lg:grid-cols-[190px_1fr]">
+          <div>
+            <span className="text-[10px] font-black tracking-[0.12em] text-[#9aa49e]">0{groupIndex + 1}</span>
+            <h2 className="mt-2 text-[16px] font-extrabold tracking-[-0.03em]">{group.title}</h2>
+            <p className="mt-2 text-[11px] leading-5 text-[#87928b]">{group.description}</p>
+          </div>
+          <div className="space-y-5">
+            {FIELDS.filter((field) => group.keys.includes(field.key)).map((f) => (
+              <div key={f.key}>
+                <label className="mb-1.5 block text-[12px] font-bold text-[#3d4a42]">
+                  {f.label}
+                  {f.required && <span className="ml-1 text-[#d45c50]">필수</span>}
+                </label>
+                <p className="mb-2 text-[11px] leading-5 text-[#8c9690]">{f.hint}</p>
+                {f.textarea ? (
+                  <textarea
+                    value={values[f.key]}
+                    onChange={(e) => setValues({ ...values, [f.key]: e.target.value })}
+                    className="field min-h-28 resize-y"
+                  />
+                ) : (
+                  <input
+                    value={values[f.key]}
+                    onChange={(e) => setValues({ ...values, [f.key]: e.target.value })}
+                    className="field"
+                  />
+                )}
+              </div>
+            ))}
+          </div>
+        </section>
+      ))}
+
+      {error && <p className="rounded-xl border border-red-200 bg-red-50 p-3 text-[12px] text-red-700">{error}</p>}
+      <footer className="surface flex flex-wrap items-center justify-between gap-3 p-4 sm:px-6">
+        <p className="text-[11px] text-[#8b958f]">저장한 내용은 언제든 다시 수정할 수 있어요.</p>
+        <div className="flex gap-2">
         <button
           onClick={submit}
           disabled={busy}
-          className="rounded bg-neutral-900 px-5 py-2 font-semibold text-white disabled:opacity-40"
+          className="rounded-xl bg-[#167b57] px-6 py-2.5 text-[13px] font-bold text-white shadow-[0_7px_18px_rgba(22,123,87,.2)] hover:-translate-y-0.5 hover:bg-[#0e6949] disabled:opacity-40"
         >
-          {busy ? "저장 중…" : "저장"}
+          {busy ? "저장하고 있어요…" : "경험 카드 저장"}
         </button>
         {cardId && (
           <button
             onClick={archive}
-            className="rounded border border-neutral-300 px-5 py-2 text-neutral-500"
+            className="rounded-xl border border-[#dce3df] bg-white px-5 py-2.5 text-[12px] font-semibold text-[#6f7b74] hover:border-[#c9a6a1] hover:bg-red-50 hover:text-red-700"
           >
             보관 처리
           </button>
         )}
+        </div>
+      </footer>
       </div>
-    </div>
   );
 }

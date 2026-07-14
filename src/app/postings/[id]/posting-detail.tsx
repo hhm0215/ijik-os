@@ -79,7 +79,7 @@ const STRENGTH_LABEL: Record<string, string> = {
 
 function Chip({ children }: { children: React.ReactNode }) {
   return (
-    <span className="inline-block rounded-full border border-neutral-300 bg-neutral-100 px-2 py-0.5 text-[11px] text-neutral-600">
+    <span className="inline-flex items-center rounded-full border border-[#dfe7e2] bg-[#f5f8f6] px-2.5 py-1 text-[10px] font-semibold text-[#627068]">
       {children}
     </span>
   );
@@ -134,39 +134,41 @@ export default function PostingDetail({ postingId }: { postingId: number }) {
     load();
   }
 
-  if (error) return <p className="text-red-600">{error}</p>;
-  if (!data) return <p className="text-neutral-400">불러오는 중…</p>;
+  if (error) return <p className="surface mx-auto max-w-xl border-red-200 p-6 text-center text-red-700">{error}</p>;
+  if (!data) return <div className="surface mx-auto max-w-xl p-10 text-center"><span className="soft-pulse text-[13px] font-semibold text-[#738078]">분석 결과를 불러오는 중…</span></div>;
 
   const { posting } = data;
   const fit = posting.fitJson ? JSON.parse(posting.fitJson) : null;
 
   if (posting.analysisStatus !== "done") {
     return (
-      <div className="mx-auto max-w-lg rounded-md border border-neutral-200 bg-white p-8 text-center">
+      <div className="surface mx-auto mt-10 max-w-xl overflow-hidden p-9 text-center sm:p-12">
         {posting.analysisStatus === "error" ? (
           <>
-            <p className="mb-2 font-semibold text-red-600">분석 실패</p>
-            <p className="mb-4 text-neutral-500">{posting.analysisError}</p>
+            <span className="mx-auto mb-5 grid size-14 place-items-center rounded-2xl bg-red-50 text-2xl">!</span>
+            <p className="mb-2 text-[18px] font-extrabold text-red-700">분석을 완료하지 못했어요</p>
+            <p className="mb-6 text-[12px] leading-6 text-[#758179]">{posting.analysisError}</p>
             <button
               onClick={retryAnalyze}
-              className="rounded bg-neutral-900 px-5 py-2 font-semibold text-white"
+              className="rounded-xl bg-[#172d22] px-6 py-3 text-[13px] font-bold text-white hover:bg-[#167b57]"
             >
               다시 분석
             </button>
           </>
         ) : (
           <>
-            <p className="mb-2 animate-pulse font-semibold">
+            <span className="soft-pulse mx-auto mb-5 grid size-14 place-items-center rounded-2xl bg-[#edf8f2] text-xl text-[#167b57]">✦</span>
+            <p className="mb-3 text-[18px] font-extrabold tracking-[-0.03em]">
               공고를 분석하는 중이에요…
             </p>
-            <p className="text-neutral-500">
+            <p className="mx-auto max-w-md text-[12px] leading-6 text-[#758179]">
               요구사항 분해 → 경험 카드 매칭 → 초안 생성 → 정합성 검증. 보통
-              1~3분 걸려요. 이 페이지는 자동으로 갱신돼요.
+              몇 분 걸릴 수 있어요. 이 페이지는 자동으로 갱신됩니다.
             </p>
             {posting.analysisStatus === "pending" && (
               <button
                 onClick={retryAnalyze}
-                className="mt-4 rounded border border-neutral-300 px-4 py-2 text-neutral-600"
+                className="mt-5 rounded-xl border border-[#dce3df] bg-white px-4 py-2.5 text-[12px] font-semibold text-[#647169] hover:border-[#9bcbb5] hover:text-[#167b57]"
               >
                 분석이 시작되지 않았다면 여기를 눌러주세요
               </button>
@@ -183,64 +185,69 @@ export default function PostingDetail({ postingId }: { postingId: number }) {
   const answeredAskbacks = data.askbacks.filter((a) => a.status !== "open");
 
   return (
-    <div>
-      <div className="mb-4 flex flex-wrap items-center gap-3">
-        <h1 className="text-[16px] font-bold">
-          {posting.title} <span className="font-normal text-neutral-500">· {posting.company}</span>
-        </h1>
+    <div className="space-y-6">
+      <header className="surface flex flex-col justify-between gap-5 overflow-hidden p-6 sm:flex-row sm:items-center sm:p-7">
+        <div className="min-w-0">
+          <div className="mb-2 flex items-center gap-2 text-[10px] font-black tracking-[0.1em] text-[#167b57]"><span className="size-1.5 rounded-full bg-[#28a274]" />ANALYSIS COMPLETE</div>
+          <h1 className="truncate text-[23px] font-black tracking-[-0.045em]">
+            {posting.title}
+          </h1>
+          <div className="mt-2 flex flex-wrap items-center gap-2 text-[12px] font-medium text-[#748078]">
+            <span>{posting.company}</span><span className="text-[#c5ccc8]">/</span><span>공고 #{posting.id}</span>
         {posting.url && (
           <a
             href={posting.url}
             target="_blank"
-            className="text-[12px] text-blue-600 underline"
+            rel="noreferrer"
+            className="rounded-full bg-[#f0f5f2] px-2.5 py-1 text-[10px] font-bold text-[#4d685a] hover:bg-[#e1f2e9] hover:text-[#167b57]"
           >
-            공고 링크
+            원문 보기 ↗
           </a>
         )}
-        <div className="ml-auto flex gap-2">
+          </div>
+        </div>
+        <div className="flex shrink-0 gap-2">
           <button
             onClick={() => setStatus("applied")}
             disabled={posting.pipelineStatus === "applied"}
-            className="rounded bg-emerald-700 px-3 py-1.5 text-[12px] font-semibold text-white disabled:opacity-50"
+            className="rounded-xl bg-[#167b57] px-4 py-2.5 text-[12px] font-bold text-white shadow-[0_6px_16px_rgba(22,123,87,.18)] hover:bg-[#0e6949] disabled:opacity-45"
           >
             {posting.pipelineStatus === "applied" ? "지원함 ✓" : "지원함으로 표시"}
           </button>
           <button
             onClick={() => setStatus("skipped")}
             disabled={posting.pipelineStatus === "skipped"}
-            className="rounded border border-neutral-300 px-3 py-1.5 text-[12px] text-neutral-500 disabled:opacity-50"
+            className="rounded-xl border border-[#dce3df] bg-white px-4 py-2.5 text-[12px] font-semibold text-[#6f7b74] hover:bg-[#f4f6f5] disabled:opacity-45"
           >
             {posting.pipelineStatus === "skipped" ? "스킵됨" : "스킵"}
           </button>
         </div>
-      </div>
+      </header>
 
-      <div className="grid gap-4 lg:grid-cols-[300px_1fr_320px]">
+      <div className="grid items-start gap-5 lg:grid-cols-[minmax(260px,.9fr)_minmax(420px,1.65fr)] 2xl:grid-cols-[minmax(260px,.85fr)_minmax(460px,1.55fr)_minmax(290px,.9fr)]">
         {/* 왼쪽: 요구사항 분해 + 매칭 */}
-        <section className="rounded-md border border-neutral-200 bg-white p-4">
-          <h2 className="mb-3 border-b border-neutral-100 pb-2 font-semibold text-neutral-500">
-            요구사항 분해 → 경험 매칭
-          </h2>
-          <ul className="space-y-2">
+        <section className="surface overflow-hidden">
+          <div className="border-b border-[#edf0ee] px-5 py-4"><p className="text-[10px] font-black tracking-[0.1em] text-[#8c9790]">EVIDENCE MAP</p><h2 className="mt-1 text-[15px] font-extrabold">요구사항과 경험</h2></div>
+          <ul className="space-y-2.5 p-4">
             {data.requirements.map((r) => (
-              <li key={r.id} className="rounded border border-neutral-200 p-2.5">
-                <div className="mb-1">
+              <li key={r.id} className="rounded-2xl border border-[#e5eae7] bg-[#fbfcfb] p-3.5">
+                <div className="mb-2 leading-5">
                   <Chip>{CAT_LABEL[r.category] ?? r.category}</Chip>{" "}
-                  <span className="font-medium">{r.text}</span>
+                  <span className="ml-1 text-[12px] font-bold text-[#37443d]">{r.text}</span>
                 </div>
                 {r.matches.length > 0 ? (
                   r.matches.map((m) => (
                     <div
                       key={m.id}
-                      className="mt-1 rounded bg-emerald-50 px-2 py-1 text-[12px] text-emerald-900"
+                      className="mt-1.5 rounded-xl bg-[#eaf7f0] px-3 py-2 text-[11px] font-semibold leading-5 text-[#176848]"
                     >
                       ✓ ({STRENGTH_LABEL[m.strength]}) {m.cardTitle}{" "}
                       <Chip>카드 #{m.cardId}</Chip>
                     </div>
                   ))
                 ) : (
-                  <div className="mt-1 rounded border border-dashed border-red-300 bg-red-50 px-2 py-1 text-[12px] text-red-700">
-                    ✗ 근거 없음 → 되묻기 질문 생성됨
+                  <div className="mt-1.5 rounded-xl border border-dashed border-[#e8c8a0] bg-[#fff8eb] px-3 py-2 text-[11px] leading-5 text-[#87602b]">
+                    근거 없음 · 되묻기 생성
                   </div>
                 )}
               </li>
@@ -249,33 +256,34 @@ export default function PostingDetail({ postingId }: { postingId: number }) {
         </section>
 
         {/* 가운데: 적합도 + 초안 */}
-        <section className="rounded-md border border-neutral-200 bg-white p-4">
+        <section className="surface overflow-hidden">
           {fit && (
-            <>
-              <div className="mb-3 grid grid-cols-4 gap-2">
+            <div className="border-b border-[#edf0ee] bg-[linear-gradient(135deg,#f5fbf8,#fffaf2)] p-5">
+              <div className="grid grid-cols-4 gap-2.5">
                 {(["tech", "domain", "collab", "impact"] as const).map((k) => (
                   <div
                     key={k}
-                    className="rounded border border-neutral-200 p-2 text-center"
+                    className="rounded-2xl border border-white/80 bg-white/85 p-3 text-center shadow-sm"
                   >
                     <div
-                      className={`text-lg font-bold ${fit[k] < 50 ? "text-red-600" : ""}`}
+                      className={`text-[20px] font-black tracking-[-0.04em] ${fit[k] < 50 ? "text-[#d25d51]" : "text-[#167b57]"}`}
                     >
                       {fit[k]}
                     </div>
-                    <div className="text-[11px] text-neutral-400">
+                    <div className="mt-1 text-[10px] font-semibold text-[#849088]">
                       {CAT_LABEL[k]}
                     </div>
                   </div>
                 ))}
               </div>
-              <div className="mb-4 rounded border-2 border-neutral-700 bg-neutral-50 px-3 py-2 font-semibold">
-                판정: {posting.verdict}
+              <div className="mt-3 flex items-start gap-2.5 rounded-2xl bg-[#173e2d] px-4 py-3 text-white shadow-[0_8px_20px_rgba(23,62,45,.14)]">
+                <span className="mt-0.5 text-[#7ed6ad]">✦</span>
+                <p className="text-[12px] font-semibold leading-5">{posting.verdict}</p>
               </div>
-            </>
+            </div>
           )}
 
-          <div className="mb-3 flex gap-1 border-b border-neutral-200">
+          <div className="flex gap-1 overflow-x-auto border-b border-[#edf0ee] bg-white px-4 pt-3">
             {(
               [
                 ["intro", "지원 초안"],
@@ -286,10 +294,10 @@ export default function PostingDetail({ postingId }: { postingId: number }) {
               <button
                 key={key}
                 onClick={() => setTab(key)}
-                className={`rounded-t px-3 py-1.5 text-[13px] ${
+                className={`whitespace-nowrap rounded-t-xl border-b-2 px-3 py-2.5 text-[12px] ${
                   tab === key
-                    ? "border border-b-0 border-neutral-300 bg-white font-semibold"
-                    : "text-neutral-400"
+                    ? "border-[#167b57] font-extrabold text-[#167b57]"
+                    : "border-transparent font-semibold text-[#8b958f] hover:text-[#4d5a52]"
                 }`}
               >
                 {label}
@@ -297,6 +305,7 @@ export default function PostingDetail({ postingId }: { postingId: number }) {
             ))}
           </div>
 
+          <div className="p-5">
           {tab === "intro" && <SentenceList sentences={intro?.sentences ?? []} />}
           {tab === "resume" && (
             <SentenceList sentences={resume?.sentences ?? []} bullet />
@@ -304,10 +313,10 @@ export default function PostingDetail({ postingId }: { postingId: number }) {
           {tab === "interview" && (
             <ul className="space-y-3">
               {data.interview.map((q) => (
-                <li key={q.id} className="rounded border border-neutral-200 p-3">
-                  <div className="mb-1.5 font-semibold">
+                <li key={q.id} className="rounded-2xl border border-[#e3e9e5] bg-[#fbfcfb] p-4">
+                  <div className="mb-2 text-[13px] font-extrabold leading-6 text-[#344139]">
                     {q.qtype === "weakness" && (
-                      <span className="mr-1 rounded bg-amber-100 px-1.5 py-0.5 text-[11px] text-amber-800">
+                      <span className="mr-2 rounded-full bg-[#fff0d5] px-2.5 py-1 text-[9px] font-black tracking-[0.04em] text-[#966427]">
                         약점 찌르기
                       </span>
                     )}
@@ -315,7 +324,7 @@ export default function PostingDetail({ postingId }: { postingId: number }) {
                   </div>
                   <ul className="space-y-1">
                     {q.answerPoints.map((p) => (
-                      <li key={p.id} className="text-[13px]">
+                      <li key={p.id} className="pl-3 text-[12px] leading-6 text-[#5f6c64]">
                         {p.type === "placeholder" ? (
                           <span className="text-amber-700">⚠ {p.text}</span>
                         ) : (
@@ -331,15 +340,15 @@ export default function PostingDetail({ postingId }: { postingId: number }) {
               ))}
             </ul>
           )}
+          </div>
         </section>
 
         {/* 오른쪽: 되묻기 */}
-        <section className="rounded-md border border-neutral-200 bg-white p-4">
-          <h2 className="mb-3 border-b border-neutral-100 pb-2 font-semibold text-neutral-500">
-            AI가 되묻는 질문 ({openAskbacks.length})
-          </h2>
+        <section className="surface overflow-hidden lg:col-span-2 2xl:col-span-1">
+          <div className="border-b border-[#edf0ee] bg-[linear-gradient(135deg,#fff9ed,#fff)] px-5 py-4"><p className="text-[10px] font-black tracking-[0.1em] text-[#b07730]">GROW YOUR BANK</p><h2 className="mt-1 text-[15px] font-extrabold">AI가 되묻는 질문 <span className="text-[#b07730]">{openAskbacks.length}</span></h2></div>
+          <div className="p-4">
           {openAskbacks.length === 0 && (
-            <p className="text-[12px] text-neutral-400">
+            <p className="rounded-2xl bg-[#f5f8f6] p-4 text-[11px] leading-5 text-[#7e8a83]">
               열린 질문이 없어요. 모든 요구사항에 근거가 있거나, 이미 답하셨어요.
             </p>
           )}
@@ -349,15 +358,15 @@ export default function PostingDetail({ postingId }: { postingId: number }) {
             ))}
           </ul>
           {answeredAskbacks.length > 0 && (
-            <div className="mt-4 border-t border-neutral-100 pt-3">
-              <h3 className="mb-2 text-[12px] font-semibold text-neutral-400">
+            <div className="mt-4 border-t border-[#edf0ee] pt-4">
+              <h3 className="mb-2 text-[10px] font-black tracking-[0.08em] text-[#8b958f]">
                 답변 완료 ({answeredAskbacks.length})
               </h3>
               <ul className="space-y-2">
                 {answeredAskbacks.map((a) => (
-                  <li key={a.id} className="rounded bg-neutral-50 p-2 text-[12px]">
-                    <div className="font-medium text-neutral-600">{a.question}</div>
-                    <div className="mt-1 text-emerald-700">
+                  <li key={a.id} className="rounded-xl bg-[#f5f8f6] p-3 text-[11px]">
+                    <div className="font-semibold leading-5 text-[#59665e]">{a.question}</div>
+                    <div className="mt-1.5 leading-5 text-[#167b57]">
                       → 경험카드 #{a.resultCardId}로 저장됨. &quot;다시 분석&quot;하면
                       초안에 반영돼요.
                     </div>
@@ -366,12 +375,13 @@ export default function PostingDetail({ postingId }: { postingId: number }) {
               </ul>
               <button
                 onClick={retryAnalyze}
-                className="mt-3 w-full rounded border border-neutral-800 py-1.5 text-[12px] font-semibold"
+                className="mt-3 w-full rounded-xl bg-[#172d22] py-2.5 text-[11px] font-bold text-white hover:bg-[#167b57]"
               >
                 새 카드 반영해서 다시 분석
               </button>
             </div>
           )}
+          </div>
         </section>
       </div>
     </div>
@@ -386,18 +396,18 @@ function SentenceList({
   bullet?: boolean;
 }) {
   if (sentences.length === 0)
-    return <p className="text-[12px] text-neutral-400">생성된 내용이 없어요.</p>;
+    return <p className="rounded-2xl bg-[#f5f8f6] p-5 text-center text-[11px] text-[#88938c]">생성된 내용이 없어요.</p>;
   return (
-    <ul className="space-y-2">
+    <ul className="space-y-3">
       {sentences.map((s) => (
         <li
           key={s.id}
-          className={`rounded border p-3 leading-relaxed ${
+          className={`rounded-2xl border p-4 text-[13px] leading-7 ${
             s.type === "placeholder"
-              ? "border-dashed border-red-300 bg-red-50 text-red-800"
+              ? "border-dashed border-[#e8c8a0] bg-[#fff8eb] text-[#815c2c]"
               : s.warning === "over_claim"
-                ? "border-amber-400 bg-amber-50"
-                : "border-neutral-200"
+                ? "border-[#e7c07e] bg-[#fff9ed] text-[#654a25]"
+                : "border-[#e2e8e4] bg-[#fbfcfb] text-[#435048]"
           }`}
         >
           {s.type === "placeholder" ? (
@@ -415,15 +425,15 @@ function SentenceList({
                 <Chip key={x.cardId}>+#{x.cardId}</Chip>
               ))}
               {s.warning === "weak_evidence" && (
-                <span className="ml-1 text-[11px] text-amber-700">근거 약함</span>
+                <span className="ml-1 rounded-full bg-[#fff0d5] px-2 py-1 text-[9px] font-bold text-[#966427]">근거 약함</span>
               )}
               {s.warning === "over_claim" && (
-                <span className="ml-1 text-[11px] font-semibold text-amber-800">
+                <span className="ml-1 text-[10px] font-semibold text-[#9a6425]">
                   ⚠ 카드 범위를 넘는 주장일 수 있어요 — 확인 필요
                 </span>
               )}
               {s.sourceChanged && (
-                <span className="ml-1 text-[11px] text-blue-700">
+                <span className="ml-1 text-[10px] font-semibold text-[#42725c]">
                   출처 카드가 수정됨
                 </span>
               )}
@@ -466,20 +476,20 @@ function AskbackItem({
   }
 
   return (
-    <li className="rounded border border-neutral-200 p-3">
-      <div className="mb-1 font-semibold">Q. {askback.question}</div>
-      <p className="mb-2 text-[12px] text-neutral-400">{askback.why}</p>
+    <li className="rounded-2xl border border-[#eadfcf] bg-[#fffdfa] p-4">
+      <div className="mb-1.5 text-[12px] font-extrabold leading-5 text-[#4b4031]">Q. {askback.question}</div>
+      <p className="mb-3 text-[10px] leading-5 text-[#928472]">{askback.why}</p>
       <textarea
         value={answer}
         onChange={(e) => setAnswer(e.target.value)}
         placeholder="여기 답하면 새 경험카드로 저장돼요. 관련 경험이 없으면 '없음'이라고 적어도 돼요."
-        className="mb-2 h-20 w-full resize-y rounded border border-dashed border-neutral-300 p-2 text-[12px]"
+        className="field mb-2 h-24 resize-y border-dashed bg-white text-[11px]"
       />
-      {error && <p className="mb-1 text-[12px] text-red-600">{error}</p>}
+      {error && <p className="mb-2 rounded-lg bg-red-50 p-2 text-[10px] text-red-700">{error}</p>}
       <button
         onClick={submit}
         disabled={busy || !answer.trim()}
-        className="rounded border border-neutral-800 px-3 py-1 text-[12px] font-semibold disabled:opacity-40"
+        className="w-full rounded-xl border border-[#d6dfda] bg-white px-3 py-2.5 text-[11px] font-bold text-[#405047] hover:border-[#91c5ac] hover:bg-[#f1faf5] hover:text-[#167b57] disabled:opacity-40"
       >
         {busy ? "카드로 저장 중…" : "답변 → 경험카드로 저장"}
       </button>
