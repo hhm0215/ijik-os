@@ -5,7 +5,7 @@
 ## 현재 상태
 
 - **단계:** 1.5단계 (품질 안정화) — 로드맵은 [PLAN.md](./PLAN.md) §6
-- **다음 마일스톤:** VPS 배포 (RAM 8GB 확인됨, Ollama 유지·Claude API 안 씀) → 실사용. 단, ijik-api 배포 마무리(DNS→Nginx→HTTPS)가 먼저 — 같은 서버·같은 패턴이라 순서상 선행 (전체 로드맵은 PLAN.md 결정 로그 2026-07-10 참고)
+- **다음 마일스톤:** 로컬에서 1.5단계 품질을 실제 공고로 확인한 뒤 VPS에 배포하여 본인 실사용을 시작한다. VPS는 개발 환경이 아니며, 로컬 `lint`·`build`·Ollama E2E를 통과한 커밋만 배포한다. `ijik-api` HTTPS 배포는 완료됨.
 - **차단 요소:** 없음 (품질 수정 2건 검증 완료, 중복 버그 수정됨). Windows에서 개발 시에만 Ollama 구조화 출력 이슈 잔존 — 버전 업그레이드로 해결 시도 (IDEAS 참고)
 - **실행 방법:** `npm run dev` (Mac: Ollama brew 서비스 / Windows: Ollama 앱)
 
