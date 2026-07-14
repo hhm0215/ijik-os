@@ -127,6 +127,13 @@ export default function CardForm({
       <h1 className="mb-4 text-[16px] font-bold">
         {cardId ? `경험 카드 #${cardId} 수정` : "새 경험 카드"}
       </h1>
+      {!cardId && (
+        <div className="mb-5 rounded border border-emerald-200 bg-emerald-50 p-3 text-[12px] text-emerald-950">
+          <strong>무엇을 적나요?</strong> 프로젝트·업무·문제 해결처럼 실제로 한 일 하나를 적으세요.
+          특히 <strong>내 역할</strong>, <strong>행동</strong>, <strong>결과 수치</strong>가 구체적일수록 공고 분석 결과가 좋아집니다.
+          AI는 아래의 “주장해도 되는 것” 범위를 넘는 문장을 만들지 않아요.
+        </div>
+      )}
       <div className="space-y-4">
         {FIELDS.map((f) => (
           <div key={f.key}>

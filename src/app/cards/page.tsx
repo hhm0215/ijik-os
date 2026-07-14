@@ -15,9 +15,10 @@ export default function CardsPage() {
   return (
     <div>
       <div className="mb-4 flex items-center justify-between">
-        <h1 className="font-semibold text-neutral-500">
-          경험 뱅크 ({cards.length}장)
-        </h1>
+        <div>
+          <h1 className="font-semibold text-neutral-500">경험 뱅크 ({cards.length}장)</h1>
+          <p className="mt-1 text-[12px] text-neutral-500">AI가 지원 자료를 만들 때 사용할 내 경험의 원본이에요. 한 카드에는 한 경험을 구체적으로 기록하세요.</p>
+        </div>
         <Link
           href="/cards/new"
           className="rounded bg-neutral-900 px-4 py-2 font-semibold text-white"

@@ -26,6 +26,9 @@ export default function RootLayout({
             <Link href="/cards" className="hover:text-neutral-900">
               경험 뱅크
             </Link>
+            <Link href="/#how-it-works" className="hover:text-neutral-900">
+              사용 방법
+            </Link>
           </nav>
         </header>
         <main className="mx-auto max-w-7xl p-5">{children}</main>

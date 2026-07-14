@@ -3,7 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
-export default function PasteForm() {
+export default function PasteForm({ hasCards }: { hasCards: boolean }) {
   const router = useRouter();
   const [rawText, setRawText] = useState("");
   const [url, setUrl] = useState("");
@@ -39,6 +39,11 @@ export default function PasteForm() {
         원티드/잡코리아 등에서 공고 본문을 복사해 붙여넣으면, 내 경험 카드와
         매칭해서 초안·되묻기·면접 질문을 만들어요.
       </p>
+      {!hasCards && (
+        <p className="mb-3 rounded border border-amber-200 bg-amber-50 p-2 text-[12px] text-amber-900">
+          먼저 경험 카드가 필요해요. 위의 <strong>첫 경험 카드 작성</strong>을 눌러 내 경험을 하나 등록하세요.
+        </p>
+      )}
       <textarea
         value={rawText}
         onChange={(e) => setRawText(e.target.value)}
@@ -54,7 +59,7 @@ export default function PasteForm() {
       {error && <p className="mb-2 text-[12px] text-red-600">{error}</p>}
       <button
         onClick={submit}
-        disabled={busy || rawText.trim().length < 50}
+        disabled={!hasCards || busy || rawText.trim().length < 50}
         className="w-full rounded bg-neutral-900 py-2 font-semibold text-white disabled:opacity-40"
       >
         {busy ? "등록 중…" : "등록하고 분석 시작"}
