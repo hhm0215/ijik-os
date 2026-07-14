@@ -11,6 +11,13 @@
 
 ## 세션 로그
 
+### 2026-07-14 — 로컬 개발 → VPS 실사용 검증 운영 규칙 고정 (커밋 dcea4c6)
+
+- 한 것: `AGENTS.md`에 로컬 개발 원칙, 배포 품질 게이트, 로컬·VPS SQLite 데이터 경계를 명시했다. `PLAN.md` 결정 로그와 현재 상태 표도 같은 흐름으로 갱신했다.
+- 확인된 것: `npm run build` 통과 (Next.js 16.2.10, TypeScript·정적 페이지 생성 완료).
+- 발견된 이슈: 기존 진행 문서가 ijik-api 배포를 선행 조건으로 표시했지만, ijik-api HTTPS 배포는 이미 완료된 상태였다. 다음 단계의 개발·검증 중심은 ijik-os 로컬이다.
+- 다음: 로컬에서 실제 공고로 1.5단계 품질을 확인하고, `lint`·`build`·Ollama E2E를 통과한 커밋만 VPS에 올려 Basic Auth 아래에서 본인 실사용을 시작한다.
+
 ### 2026-07-12 — Mac E2E 검증 완료 + 재분석 중복 누적 버그 수정 (커밋 6a39ea9, feb2e3e)
 
 - 한 것: (1) Windows에서 보류됐던 품질 수정 2건을 pipeline-eval로 검증 — 적합도 감점 규칙 작동(domain 100→중복 오염 상태에서 0, 정리 후 45로 notClaimable ≤49 규칙 안), 면접 질문 분리 호출 작동(6→13개). (2) 재분석 중복 누적 버그 수정 — persist에서 기존 결과 삭제(FK cascade 활용)+신규 저장을 한 트랜잭션으로, requirements 사전 INSERT도 트랜잭션 안으로 이동
