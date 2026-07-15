@@ -2,9 +2,11 @@
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { mergeSelectedImportCandidates } from "@/lib/card-import-merge";
 import type { CardValues } from "../card-form";
 
 type Candidate = CardValues & {
+  clientId: string;
   sourceQuote: string;
   sourceQuoteVerified: boolean;
   needsReview: (keyof CardValues)[];
@@ -12,7 +14,7 @@ type Candidate = CardValues & {
 };
 
 type ImportResponse = {
-  cards: Omit<Candidate, "selected">[];
+  cards: Omit<Candidate, "clientId" | "selected">[];
   sources: string[];
   truncated: boolean;
   provider: string;
@@ -46,10 +48,14 @@ export default function DocumentImporter() {
   const [busy, setBusy] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
+
+  const selectedCount = candidates.filter((card) => card.selected).length;
 
   async function analyze() {
     setBusy(true);
     setError(null);
+    setNotice(null);
     try {
       const body = new FormData();
       files.forEach((file) => body.append("files", file));
@@ -57,7 +63,11 @@ export default function DocumentImporter() {
       const response = await fetch("/api/cards/import", { method: "POST", body });
       const result = (await response.json()) as ImportResponse;
       if (!response.ok) throw new Error(result.error ?? "문서를 분석하지 못했어요.");
-      setCandidates(result.cards.map((card) => ({ ...card, selected: false })));
+      setCandidates(result.cards.map((card) => ({
+        ...card,
+        clientId: crypto.randomUUID(),
+        selected: false,
+      })));
       setMeta({ provider: result.provider, truncated: result.truncated });
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : String(cause));
@@ -70,6 +80,17 @@ export default function DocumentImporter() {
     setCandidates((current) => current.map((card, cardIndex) =>
       cardIndex === index ? { ...card, [key]: value } : card
     ));
+  }
+
+  function mergeSelected() {
+    if (selectedCount < 2) return;
+    const firstSelectedIndex = candidates.findIndex((candidate) => candidate.selected);
+    if (!confirm(`같은 프로젝트·역할·기간인 후보만 합쳐 주세요. 선택한 ${selectedCount}개를 화면에서 가장 위에 있는 경험 후보 ${firstSelectedIndex + 1}을 기준으로 합칠까요? 합친 뒤 내용을 수정할 수 있습니다.`)) return;
+
+    const result = mergeSelectedImportCandidates(candidates);
+    setCandidates(result.candidates);
+    setError(null);
+    setNotice(`${result.mergedCount}개 후보를 하나로 합쳤습니다. 제목과 중복 문구를 확인해 주세요.`);
   }
 
   async function saveSelected() {
@@ -159,15 +180,15 @@ export default function DocumentImporter() {
       ) : (
         <>
           <section className="surface flex flex-wrap items-center justify-between gap-3 p-4 sm:px-6">
-            <div><strong className="text-[13px]">{candidates.length}개의 경험 후보</strong><p className="mt-1 text-[10px] text-[#839087]">{meta?.provider}로 정리됨{meta?.truncated ? " · 긴 문서의 뒷부분은 제외됨" : ""}</p></div>
-            <button onClick={() => { setCandidates([]); setMeta(null); }} className="rounded-xl border border-[#dce3df] px-3 py-2 text-[11px] font-semibold text-[#67736c] hover:bg-[#f4f6f5]">다른 문서 선택</button>
+            <div><strong className="text-[13px]">{candidates.length}개의 경험 후보</strong><p className="mt-1 text-[10px] text-[#839087]">{meta?.provider}로 정리됨{meta?.truncated ? " · 긴 문서의 뒷부분은 제외됨" : ""}</p><p className="mt-1 text-[10px] text-[#647169]">같은 프로젝트·역할·기간인데 나뉜 후보는 체크한 뒤 아래에서 합칠 수 있어요.</p></div>
+            <button onClick={() => { setCandidates([]); setMeta(null); setError(null); setNotice(null); }} className="rounded-xl border border-[#dce3df] px-3 py-2 text-[11px] font-semibold text-[#67736c] hover:bg-[#f4f6f5]">다른 문서 선택</button>
           </section>
 
           <div className="space-y-4">
             {candidates.map((card, index) => (
-              <article key={index} className={`surface overflow-hidden ${card.selected ? "border-[#a7d6c0]" : "opacity-60"}`}>
+              <article key={card.clientId} className={`surface overflow-hidden ${card.selected ? "border-[#a7d6c0]" : "opacity-60"}`}>
                 <div className="flex items-center gap-3 border-b border-[#edf0ee] px-5 py-4">
-                  <input type="checkbox" checked={card.selected} onChange={(event) => setCandidates((current) => current.map((item, itemIndex) => itemIndex === index ? { ...item, selected: event.target.checked } : item))} className="size-4 accent-[#167b57]" />
+                  <input type="checkbox" aria-label={`경험 후보 ${index + 1} 선택`} checked={card.selected} onChange={(event) => setCandidates((current) => current.map((item, itemIndex) => itemIndex === index ? { ...item, selected: event.target.checked } : item))} className="size-4 accent-[#167b57]" />
                   <strong className="flex-1 text-[13px]">경험 후보 {index + 1}</strong>
                   {card.needsReview.length > 0 && <span className="rounded-full bg-[#fff0d7] px-2.5 py-1 text-[9px] font-bold text-[#996729]">검토 필요 {card.needsReview.length}</span>}
                 </div>
@@ -182,7 +203,7 @@ export default function DocumentImporter() {
                     <summary className="cursor-pointer text-[11px] font-bold text-[#536159]">성과·배운 점·주장 범위 등 추가 항목</summary>
                     <div className="mt-4 grid gap-4 md:grid-cols-2">{EXTRA_FIELDS.map((field) => <label key={field.key} className={field.key === "evidenceSentence" || field.key === "claimable" ? "md:col-span-2" : ""}><span className="mb-1.5 block text-[10px] font-bold text-[#647169]">{field.label}{card.needsReview.includes(field.key) && <em className="ml-1 not-italic text-[#b16e24]">확인</em>}</span><textarea value={card[field.key]} onChange={(event) => updateCandidate(index, field.key, event.target.value)} className="field min-h-20 resize-y text-[12px]" /></label>)}</div>
                   </details>
-                  <div className={`md:col-span-2 rounded-xl p-3 text-[10px] leading-5 ${card.sourceQuoteVerified ? "bg-[#f2f6f4] text-[#718078]" : "bg-[#fff7e8] text-[#87602b]"}`}>
+                  <div className={`whitespace-pre-wrap md:col-span-2 rounded-xl p-3 text-[10px] leading-5 ${card.sourceQuoteVerified ? "bg-[#f2f6f4] text-[#718078]" : "bg-[#fff7e8] text-[#87602b]"}`}>
                     <strong className={card.sourceQuoteVerified ? "text-[#536159]" : "text-[#9a6729]"}>
                       원문 근거 {card.sourceQuoteVerified ? "✓" : "· 직접 확인 필요"}
                     </strong><br />
@@ -192,8 +213,17 @@ export default function DocumentImporter() {
               </article>
             ))}
           </div>
+          {notice && <p className="rounded-xl bg-[#edf8f2] p-3 text-[11px] text-[#176b4d]">{notice}</p>}
           {error && <p className="rounded-xl bg-red-50 p-3 text-[11px] text-red-700">{error}</p>}
-          <footer className="surface sticky bottom-4 flex flex-wrap items-center justify-between gap-3 p-4 sm:px-6"><p className="text-[11px] text-[#78847d]">선택한 {candidates.filter((card) => card.selected).length}개 카드만 저장합니다.</p><button onClick={saveSelected} disabled={saving} className="rounded-xl bg-[#167b57] px-6 py-3 text-[13px] font-bold text-white shadow-[0_8px_20px_rgba(22,123,87,.18)] hover:bg-[#0e6949] disabled:opacity-50">{saving ? "카드를 저장하고 있어요…" : "선택한 카드 저장 →"}</button></footer>
+          <footer className="surface sticky bottom-4 flex flex-wrap items-center justify-between gap-3 p-4 sm:px-6">
+            <p className="text-[11px] text-[#78847d]">선택한 {selectedCount}개 카드만 저장합니다.</p>
+            <div className="flex flex-wrap gap-2">
+              <button onClick={mergeSelected} disabled={selectedCount < 2 || saving} className="rounded-xl border border-[#a9cdbb] bg-white px-4 py-3 text-[12px] font-bold text-[#167b57] hover:bg-[#edf8f2] disabled:cursor-not-allowed disabled:border-[#dfe5e1] disabled:text-[#a2aba6]">
+                선택한 {selectedCount}개 합치기
+              </button>
+              <button onClick={saveSelected} disabled={saving} className="rounded-xl bg-[#167b57] px-6 py-3 text-[13px] font-bold text-white shadow-[0_8px_20px_rgba(22,123,87,.18)] hover:bg-[#0e6949] disabled:opacity-50">{saving ? "카드를 저장하고 있어요…" : "선택한 카드 저장 →"}</button>
+            </div>
+          </footer>
         </>
       )}
     </div>

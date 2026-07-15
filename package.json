@@ -5,6 +5,7 @@
   "scripts": {
     "dev": "next dev",
     "test": "tsx --test",
+    "eval:card-import": "tsx scripts/card-import-eval.ts",
     "build": "next build",
     "start": "next start",
     "lint": "eslint",

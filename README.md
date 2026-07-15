@@ -34,10 +34,12 @@ Claude API 키가 있으면 `.env.local`에 `ANTHROPIC_API_KEY`를 넣으세요 
 npm test
 npm run lint
 npm run build
+# 앱과 Ollama 실행 후, 저장 없이 경험 분할·병합 실제 모델 회귀 평가
+npm run eval:card-import
 ```
 
-빠른 정책·입력 경계는 TypeScript 단위 테스트로, 실제 LLM 결과 품질은 같은 공고를
-재분석하는 `pipeline-eval` 절차로 나눠 검증한다.
+빠른 정책·입력 경계는 TypeScript 단위 테스트로 검증한다. 실제 LLM 결과 품질은 경험
+가져오기의 `eval:card-import`와 같은 공고를 재분석하는 `pipeline-eval` 절차로 나눠 검증한다.
 
 ## 사용 흐름
 

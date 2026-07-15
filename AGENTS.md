@@ -39,6 +39,7 @@ npm run db:push      # 스키마 변경을 SQLite에 반영 (drizzle-kit push)
 npm test             # Node 테스트 러너 + tsx (TypeScript 단위 테스트)
 npm run lint         # ESLint
 npm run build        # 프로덕션 빌드
+npm run eval:card-import # 앱+Ollama 실행 상태에서 경험 분할·병합 회귀 평가 (DB 저장 없음)
 ```
 
 ## 문서 체계 — 무엇을 어디서 읽고 쓰는가

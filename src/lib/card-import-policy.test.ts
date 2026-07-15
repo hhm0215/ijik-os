@@ -1,6 +1,10 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { cardBatchSchema, isSourceQuoteVerified } from "./card-import-policy";
+import {
+  CARD_IMPORT_SYSTEM_PROMPT,
+  cardBatchSchema,
+  isSourceQuoteVerified,
+} from "./card-import-policy";
 
 const validCard = {
   title: " 결제 장애 대응 ",
@@ -69,5 +73,40 @@ describe("cardBatchSchema", () => {
         .success,
       false
     );
+  });
+});
+
+describe("CARD_IMPORT_SYSTEM_PROMPT split and merge policy contract", () => {
+  it("requires one card for the same project, role, and period", () => {
+    assert.match(
+      CARD_IMPORT_SYSTEM_PROMPT,
+      /같은 프로젝트·같은 역할·같은 기간의 내용은 반드시 하나의 경험 카드로 통합/
+    );
+  });
+
+  it("forbids splitting merely because there are multiple duties or results", () => {
+    assert.match(
+      CARD_IMPORT_SYSTEM_PROMPT,
+      /업무 항목이나 성과가 여러 개라는 사실은 분리 근거가 아니다/
+    );
+  });
+
+  it("allows splitting only for an explicit project, role, or period boundary", () => {
+    assert.match(
+      CARD_IMPORT_SYSTEM_PROMPT,
+      /별도 프로젝트가 명확하거나, 역할 변경이 명시됐거나, 기간 구분이 명확할 때만/
+    );
+  });
+
+  it("merges instead of splitting when the boundary is ambiguous", () => {
+    assert.match(
+      CARD_IMPORT_SYSTEM_PROMPT,
+      /분리 경계가 불명확하면 나누지 말고 하나의 카드로 통합/
+    );
+  });
+
+  it("uses structured identity values and a canonical marker for unknown boundaries", () => {
+    assert.match(CARD_IMPORT_SYSTEM_PROMPT, /experienceIdentity의 project\/role\/period/);
+    assert.match(CARD_IMPORT_SYSTEM_PROMPT, /문서에 없는 식별 항목은 추정하지 말고 정확히 '미상'/);
   });
 });
