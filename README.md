@@ -28,6 +28,17 @@ npm run dev       # http://localhost:3000
 
 Claude API 키가 있으면 `.env.local`에 `ANTHROPIC_API_KEY`를 넣으세요 — 자동으로 Claude를 사용해요 (품질↑, 유료). 없으면 Ollama 로컬 모델로 동작해요 (무료, 데이터가 기기 밖으로 안 나감). 자세한 옵션은 `.env.local.example` 참고.
 
+### 로컬 품질 게이트
+
+```bash
+npm test
+npm run lint
+npm run build
+```
+
+빠른 정책·입력 경계는 TypeScript 단위 테스트로, 실제 LLM 결과 품질은 같은 공고를
+재분석하는 `pipeline-eval` 절차로 나눠 검증한다.
+
 ## 사용 흐름
 
 1. **경험 뱅크**에 직접 카드를 작성하거나, 이력서·자소서·포트폴리오 문서에서 경험 후보를 가져온다.

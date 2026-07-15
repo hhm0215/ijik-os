@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { generateStructured, llmProviderInfo } from "@/lib/llm";
 import { extractDocument } from "@/lib/document-import";
+import { isSourceQuoteVerified } from "@/lib/card-import-policy";
 
 export const maxDuration = 600;
 
@@ -38,14 +39,6 @@ const importedCardSchema = z.object({
 const importSchema = z.object({
   cards: z.array(importedCardSchema).min(1).max(12),
 });
-
-function normalizeForQuoteCheck(value: string): string {
-  return value
-    .normalize("NFKC")
-    .replace(/[“”„‟‘’‚‛"'`]/g, "")
-    .replace(/\s+/g, "")
-    .toLocaleLowerCase("ko-KR");
-}
 
 export async function POST(request: Request) {
   try {
@@ -90,13 +83,10 @@ export async function POST(request: Request) {
       user: source,
     });
 
-    const normalizedSource = normalizeForQuoteCheck(source);
     const cards = result.cards.map((card) => {
-      const normalizedQuote = normalizeForQuoteCheck(card.sourceQuote);
       return {
         ...card,
-        sourceQuoteVerified:
-          normalizedQuote.length >= 10 && normalizedSource.includes(normalizedQuote),
+        sourceQuoteVerified: isSourceQuoteVerified(source, card.sourceQuote),
       };
     });
 

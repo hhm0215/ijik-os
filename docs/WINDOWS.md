@@ -30,8 +30,9 @@ npm ci
 npm run dev
 ```
 
-브라우저에서 `http://localhost:3000`을 연다. 다른 앱이 3000을 사용하면 Next.js가
-안내하는 실제 포트를 사용한다.
+브라우저에서 `http://localhost:3000`을 연다. 다른 앱이 포트를 사용 중이면 사용자
+프로세스를 임의 종료하지 말고 `/api/cards`가 JSON 배열을 반환하는 주소인지 확인한 뒤,
+필요하면 `npm run dev -- -p 3100`처럼 빈 포트를 명시한다.
 
 세션 시작 시 아래 문서를 읽는다.
 
@@ -60,6 +61,7 @@ npm run dev
 ## 5. 작업 완료 게이트
 
 ```powershell
+npm test
 npm run lint
 npm run build
 git status --short

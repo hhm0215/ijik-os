@@ -36,6 +36,7 @@ This version has breaking changes — APIs, conventions, and file structure may 
 ```bash
 npm run dev          # 개발 서버 (localhost:3000)
 npm run db:push      # 스키마 변경을 SQLite에 반영 (drizzle-kit push)
+npm test             # Node 테스트 러너 + tsx (TypeScript 단위 테스트)
 npm run lint         # ESLint
 npm run build        # 프로덕션 빌드
 ```
