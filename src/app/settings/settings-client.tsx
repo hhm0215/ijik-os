@@ -229,7 +229,7 @@ export default function SettingsClient({
           <span className="text-[10px] font-black tracking-[0.12em] text-[#9aa49e]">01</span>
           <h2 className="mt-2 text-[16px] font-extrabold tracking-[-0.03em]">프로필</h2>
           <p className="mt-2 text-[11px] leading-5 text-[#87928b]">
-            헤더와 워크스페이스에 표시되는 소유자 이름을 관리해요.
+            헤더와 워크스페이스에 표시되는 계정 이름을 관리해요.
           </p>
         </div>
         <form onSubmit={saveProfile} className="space-y-5">
@@ -254,7 +254,7 @@ export default function SettingsClient({
             </label>
             <input id="profile-email" value={initialUser.email} readOnly className="field" />
             <p className="mt-2 text-[10px] leading-5 text-[#8c9690]">
-              단일 소유자 이메일은 서버 설정으로 고정됩니다.
+              로그인 이메일은 현재 이 화면에서 변경할 수 없어요.
             </p>
           </div>
           {profileError && <ErrorMessage>{profileError}</ErrorMessage>}

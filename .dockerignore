@@ -3,6 +3,7 @@ node_modules
 data
 .env*
 backups
+secrets
 **/backups
 *.db
 *.db-wal

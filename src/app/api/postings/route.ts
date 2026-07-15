@@ -1,17 +1,18 @@
-import { desc } from "drizzle-orm";
+import { desc, eq } from "drizzle-orm";
 import { db, jobPostings } from "@/db";
-import { ownerRoute } from "@/lib/auth-session";
+import { userRoute } from "@/lib/auth-session";
 
-export const GET = ownerRoute(async () => {
+export const GET = userRoute(async (_request, _context, session) => {
   const postings = db
     .select()
     .from(jobPostings)
+    .where(eq(jobPostings.userId, session.user.id))
     .orderBy(desc(jobPostings.collectedAt))
     .all();
   return Response.json(postings);
 });
 
-export const POST = ownerRoute(async (request) => {
+export const POST = userRoute(async (request, _context, session) => {
   const body = await request.json();
   if (!body.rawText || body.rawText.trim().length < 50) {
     return Response.json(
@@ -22,6 +23,7 @@ export const POST = ownerRoute(async (request) => {
   const posting = db
     .insert(jobPostings)
     .values({
+      userId: session.user.id,
       rawText: body.rawText,
       url: body.url ?? "",
       source: "manual",

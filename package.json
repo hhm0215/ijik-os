@@ -5,6 +5,7 @@
   "scripts": {
     "dev": "next dev",
     "test": "tsx --test",
+    "test:tenant-http": "tsx scripts/http-tenant-smoke.ts",
     "eval:card-import": "tsx scripts/card-import-eval.ts",
     "build": "next build",
     "start": "next start",

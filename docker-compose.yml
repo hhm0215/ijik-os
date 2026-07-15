@@ -7,12 +7,14 @@ services:
     ports:
       - "127.0.0.1:3400:3000"
     environment:
-      # 소유자 인증. 운영 값은 저장소가 아닌 서버의 .env에만 둔다.
+      # 계정 인증. 운영 값은 저장소가 아닌 서버의 .env에만 둔다.
       BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET:?BETTER_AUTH_SECRET is required}
       BETTER_AUTH_URL: ${BETTER_AUTH_URL:?BETTER_AUTH_URL is required}
-      OWNER_EMAIL: ${OWNER_EMAIL:?OWNER_EMAIL is required}
-      # 최초 /setup 완료 후 .env에서 비워도 된다.
-      OWNER_SETUP_TOKEN: ${OWNER_SETUP_TOKEN:-}
+      OPERATOR_EMAIL: ${OPERATOR_EMAIL:?OPERATOR_EMAIL is required}
+      OPERATOR_NAME: ${OPERATOR_NAME:-운영자}
+      # Compose는 비밀번호를 환경변수 대신 읽기 전용 secret 파일로 전달한다.
+      OPERATOR_PASSWORD_FILE: /run/secrets/operator_password
+      SIGNUP_MODE: ${SIGNUP_MODE:-closed}
       DATABASE_PATH: /app/data/app.db
       OLLAMA_BASE_URL: http://ollama:11434
       OLLAMA_MODEL: ${OLLAMA_MODEL:-qwen3:8b}
@@ -22,6 +24,8 @@ services:
       ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
     volumes:
       - app-data:/app/data
+    secrets:
+      - operator_password
     depends_on:
       - ollama
 
@@ -35,3 +39,7 @@ services:
 volumes:
   app-data:
   ollama-models:
+
+secrets:
+  operator_password:
+    file: ${OPERATOR_PASSWORD_FILE:?OPERATOR_PASSWORD_FILE is required}

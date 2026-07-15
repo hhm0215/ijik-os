@@ -3,6 +3,7 @@ import "server-only";
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { APIError, createAuthMiddleware } from "better-auth/api";
+import { admin } from "better-auth/plugins";
 import {
   authAccounts,
   authSessions,
@@ -10,11 +11,16 @@ import {
   authVerifications,
   db,
 } from "@/db";
-import { getOwnerCount } from "@/lib/owner";
-import {
-  evaluateOwnerSignup,
-  MIN_OWNER_PASSWORD_LENGTH,
-} from "@/lib/owner-signup-policy";
+import { MAX_PASSWORD_LENGTH, MIN_PASSWORD_LENGTH } from "@/lib/signup-policy";
+
+const ALLOWED_ADMIN_PATHS = new Set([
+  "/admin/list-users",
+  "/admin/list-user-sessions",
+  "/admin/ban-user",
+  "/admin/unban-user",
+  "/admin/revoke-user-session",
+  "/admin/revoke-user-sessions",
+]);
 
 function getAuthSecret() {
   const secret = process.env.BETTER_AUTH_SECRET?.trim();
@@ -56,41 +62,27 @@ export const auth = betterAuth({
   emailAndPassword: {
     enabled: true,
     disableSignUp: true,
-    minPasswordLength: MIN_OWNER_PASSWORD_LENGTH,
-    maxPasswordLength: 128,
+    minPasswordLength: MIN_PASSWORD_LENGTH,
+    maxPasswordLength: MAX_PASSWORD_LENGTH,
   },
   session: {
     expiresIn: 60 * 60 * 24 * 30,
     updateAge: 60 * 60 * 24,
   },
-  databaseHooks: {
-    user: {
-      create: {
-        before: async (user) => {
-          const decision = evaluateOwnerSignup({
-            configuredOwnerEmail: process.env.OWNER_EMAIL,
-            attemptedEmail: user.email,
-            existingOwnerCount: getOwnerCount(),
-          });
-          if (decision.allowed) return;
-
-          if (decision.reason === "owner-email-missing") {
-            throw new APIError("SERVICE_UNAVAILABLE", {
-              message: "서버에 OWNER_EMAIL 설정이 필요합니다.",
-            });
-          }
-          throw new APIError("FORBIDDEN", {
-            message: "새 계정 등록이 허용되지 않습니다.",
-          });
-        },
-      },
-    },
-  },
+  plugins: [admin({ defaultRole: "user", adminRoles: ["admin"] })],
   hooks: {
     before: createAuthMiddleware(async (ctx) => {
       if (ctx.path === "/sign-up/email") {
         throw new APIError("FORBIDDEN", {
           message: "공개 가입은 사용할 수 없습니다.",
+        });
+      }
+      if (
+        ctx.path.startsWith("/admin/") &&
+        !ALLOWED_ADMIN_PATHS.has(ctx.path)
+      ) {
+        throw new APIError("FORBIDDEN", {
+          message: "이 관리자 작업은 사용할 수 없습니다.",
         });
       }
     }),

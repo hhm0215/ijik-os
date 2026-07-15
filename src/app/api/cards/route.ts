@@ -1,17 +1,22 @@
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { db, experienceCards } from "@/db";
-import { ownerRoute } from "@/lib/auth-session";
+import { userRoute } from "@/lib/auth-session";
 
-export const GET = ownerRoute(async () => {
+export const GET = userRoute(async (_request, _context, session) => {
   const cards = db
     .select()
     .from(experienceCards)
-    .where(eq(experienceCards.archived, false))
+    .where(
+      and(
+        eq(experienceCards.userId, session.user.id),
+        eq(experienceCards.archived, false)
+      )
+    )
     .all();
   return Response.json(cards);
 });
 
-export const POST = ownerRoute(async (request) => {
+export const POST = userRoute(async (request, _context, session) => {
   const body = await request.json();
   if (!body.title || !body.situation || !body.role || !body.action) {
     return Response.json(
@@ -22,6 +27,7 @@ export const POST = ownerRoute(async (request) => {
   const card = db
     .insert(experienceCards)
     .values({
+      userId: session.user.id,
       title: body.title,
       situation: body.situation,
       role: body.role,

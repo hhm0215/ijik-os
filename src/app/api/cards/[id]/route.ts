@@ -1,21 +1,26 @@
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { db, draftSentences, experienceCards } from "@/db";
-import { ownerRoute } from "@/lib/auth-session";
+import { userRoute } from "@/lib/auth-session";
 
 type Ctx = { params: Promise<{ id: string }> };
 
-export const GET = ownerRoute(async (_request: Request, { params }: Ctx) => {
+export const GET = userRoute(async (_request: Request, { params }: Ctx, session) => {
   const { id } = await params;
   const card = db
     .select()
     .from(experienceCards)
-    .where(eq(experienceCards.id, Number(id)))
+    .where(
+      and(
+        eq(experienceCards.id, Number(id)),
+        eq(experienceCards.userId, session.user.id)
+      )
+    )
     .get();
   if (!card) return Response.json({ error: "카드 없음" }, { status: 404 });
   return Response.json(card);
 });
 
-export const PUT = ownerRoute(async (request: Request, { params }: Ctx) => {
+export const PUT = userRoute(async (request: Request, { params }: Ctx, session) => {
   const { id } = await params;
   const cardId = Number(id);
   const body = await request.json();
@@ -34,7 +39,12 @@ export const PUT = ownerRoute(async (request: Request, { params }: Ctx) => {
       tags: body.tags ?? "",
       updatedAt: new Date().toISOString(),
     })
-    .where(eq(experienceCards.id, cardId))
+    .where(
+      and(
+        eq(experienceCards.id, cardId),
+        eq(experienceCards.userId, session.user.id)
+      )
+    )
     .returning()
     .get();
   if (!card) return Response.json({ error: "카드 없음" }, { status: 404 });
@@ -42,19 +52,29 @@ export const PUT = ownerRoute(async (request: Request, { params }: Ctx) => {
   // 카드 변경 정책: 이 카드를 출처로 가진 초안 문장에 "출처 변경됨" 표시
   db.update(draftSentences)
     .set({ sourceChanged: true })
-    .where(eq(draftSentences.primarySourceCardId, cardId))
+    .where(
+      and(
+        eq(draftSentences.primarySourceCardId, cardId),
+        eq(draftSentences.userId, session.user.id)
+      )
+    )
     .run();
 
   return Response.json(card);
 });
 
-export const DELETE = ownerRoute(async (_request: Request, { params }: Ctx) => {
+export const DELETE = userRoute(async (_request: Request, { params }: Ctx, session) => {
   const { id } = await params;
   // hard delete 금지 — 초안이 출처로 참조하므로 보관 처리만
   const card = db
     .update(experienceCards)
     .set({ archived: true, updatedAt: new Date().toISOString() })
-    .where(eq(experienceCards.id, Number(id)))
+    .where(
+      and(
+        eq(experienceCards.id, Number(id)),
+        eq(experienceCards.userId, session.user.id)
+      )
+    )
     .returning()
     .get();
   if (!card) return Response.json({ error: "카드 없음" }, { status: 404 });

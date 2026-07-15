@@ -1,17 +1,17 @@
 import assert from "node:assert/strict";
-import { describe, it } from "node:test";
 import { spawnSync } from "node:child_process";
 import path from "node:path";
+import { describe, it } from "node:test";
 
-describe("multi-user authentication flow", () => {
-  it("atomically bootstraps one operator and gates public user signup", () => {
+describe("multi-user data and operator boundaries", () => {
+  it("isolates domain rows and supports the restricted operator lifecycle", () => {
     const result = spawnSync(
       process.execPath,
       [
         "--conditions=react-server",
         "--import",
         "tsx",
-        path.join(process.cwd(), "scripts/auth-smoke.ts"),
+        path.join(process.cwd(), "scripts/tenant-smoke.ts"),
       ],
       {
         cwd: process.cwd(),
@@ -22,7 +22,7 @@ describe("multi-user authentication flow", () => {
           DATABASE_PATH: ":memory:",
           BETTER_AUTH_URL: "http://localhost:3000",
           BETTER_AUTH_SECRET:
-            "test-only-7VgV2m3u6qQf4y8P1b9C5x0N2k6R3s8Z0j4L7w1A",
+            "tenant-test-8LqR7w2N5kV3xP9mC1bF6hJ4sD0zA2uE7yT5nM9pQ3rW1",
           OPERATOR_EMAIL: "operator@example.com",
           OPERATOR_NAME: "Operator",
           OPERATOR_BOOTSTRAP_PASSWORD: "operator-password-123",
@@ -36,6 +36,6 @@ describe("multi-user authentication flow", () => {
       0,
       `stdout:\n${result.stdout}\nstderr:\n${result.stderr}`
     );
-    assert.match(result.stdout, /auth-smoke-ok/);
+    assert.match(result.stdout, /tenant-smoke-ok/);
   });
 });

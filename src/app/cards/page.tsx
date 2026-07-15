@@ -1,4 +1,4 @@
-import { desc, eq } from "drizzle-orm";
+import { and, desc, eq } from "drizzle-orm";
 import Link from "next/link";
 import { db, experienceCards } from "@/db";
 import { requirePageSession } from "@/lib/auth-session";
@@ -6,12 +6,17 @@ import { requirePageSession } from "@/lib/auth-session";
 export const dynamic = "force-dynamic";
 
 export default async function CardsPage() {
-  await requirePageSession();
+  const session = await requirePageSession();
 
   const cards = db
     .select()
     .from(experienceCards)
-    .where(eq(experienceCards.archived, false))
+    .where(
+      and(
+        eq(experienceCards.userId, session.user.id),
+        eq(experienceCards.archived, false)
+      )
+    )
     .orderBy(desc(experienceCards.updatedAt))
     .all();
 

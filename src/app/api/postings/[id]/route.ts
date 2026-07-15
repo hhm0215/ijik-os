@@ -1,4 +1,4 @@
-import { asc, eq, inArray } from "drizzle-orm";
+import { and, asc, eq, inArray } from "drizzle-orm";
 import {
   askbacks,
   db,
@@ -12,44 +12,77 @@ import {
   matches,
   requirements,
 } from "@/db";
-import { ownerRoute } from "@/lib/auth-session";
+import { userRoute } from "@/lib/auth-session";
 
 type Ctx = { params: Promise<{ id: string }> };
 
-export const GET = ownerRoute(async (_request: Request, { params }: Ctx) => {
+export const GET = userRoute(async (_request: Request, { params }: Ctx, session) => {
   const { id } = await params;
   const postingId = Number(id);
   const posting = db
     .select()
     .from(jobPostings)
-    .where(eq(jobPostings.id, postingId))
+    .where(
+      and(
+        eq(jobPostings.id, postingId),
+        eq(jobPostings.userId, session.user.id)
+      )
+    )
     .get();
   if (!posting) return Response.json({ error: "공고 없음" }, { status: 404 });
 
-  const cards = db.select().from(experienceCards).all();
+  const cards = db
+    .select()
+    .from(experienceCards)
+    .where(eq(experienceCards.userId, session.user.id))
+    .all();
   const cardTitle = new Map(cards.map((c) => [c.id, c.title]));
 
   const reqRows = db
     .select()
     .from(requirements)
-    .where(eq(requirements.jobPostingId, postingId))
+    .where(
+      and(
+        eq(requirements.userId, session.user.id),
+        eq(requirements.jobPostingId, postingId)
+      )
+    )
     .all();
   const reqIds = reqRows.map((r) => r.id);
   const matchRows = reqIds.length
-    ? db.select().from(matches).where(inArray(matches.requirementId, reqIds)).all()
+    ? db
+        .select()
+        .from(matches)
+        .where(
+          and(
+            eq(matches.userId, session.user.id),
+            inArray(matches.requirementId, reqIds)
+          )
+        )
+        .all()
     : [];
 
   const draftRows = db
     .select()
     .from(drafts)
-    .where(eq(drafts.jobPostingId, postingId))
+    .where(
+      and(
+        eq(drafts.userId, session.user.id),
+        eq(drafts.jobPostingId, postingId)
+      )
+    )
     .all();
   const draftIds = draftRows.map((d) => d.id);
   const sentenceRows = draftIds.length
     ? db
         .select()
         .from(draftSentences)
-        .where(inArray(draftSentences.draftId, draftIds))
+        .where(
+          and(
+            eq(draftSentences.userId, session.user.id),
+            inArray(draftSentences.draftId, draftIds)
+          )
+        )
         .orderBy(asc(draftSentences.orderIdx))
         .all()
     : [];
@@ -58,20 +91,35 @@ export const GET = ownerRoute(async (_request: Request, { params }: Ctx) => {
     ? db
         .select()
         .from(draftSentenceSources)
-        .where(inArray(draftSentenceSources.sentenceId, sentenceIds))
+        .where(
+          and(
+            eq(draftSentenceSources.userId, session.user.id),
+            inArray(draftSentenceSources.sentenceId, sentenceIds)
+          )
+        )
         .all()
     : [];
 
   const askbackRows = db
     .select()
     .from(askbacks)
-    .where(eq(askbacks.jobPostingId, postingId))
+    .where(
+      and(
+        eq(askbacks.userId, session.user.id),
+        eq(askbacks.jobPostingId, postingId)
+      )
+    )
     .all();
 
   const questionRows = db
     .select()
     .from(interviewQuestions)
-    .where(eq(interviewQuestions.jobPostingId, postingId))
+    .where(
+      and(
+        eq(interviewQuestions.userId, session.user.id),
+        eq(interviewQuestions.jobPostingId, postingId)
+      )
+    )
     .orderBy(asc(interviewQuestions.orderIdx))
     .all();
   const questionIds = questionRows.map((q) => q.id);
@@ -79,7 +127,12 @@ export const GET = ownerRoute(async (_request: Request, { params }: Ctx) => {
     ? db
         .select()
         .from(interviewAnswerPoints)
-        .where(inArray(interviewAnswerPoints.questionId, questionIds))
+        .where(
+          and(
+            eq(interviewAnswerPoints.userId, session.user.id),
+            inArray(interviewAnswerPoints.questionId, questionIds)
+          )
+        )
         .orderBy(asc(interviewAnswerPoints.orderIdx))
         .all()
     : [];
@@ -128,7 +181,7 @@ export const GET = ownerRoute(async (_request: Request, { params }: Ctx) => {
   });
 });
 
-export const PATCH = ownerRoute(async (request: Request, { params }: Ctx) => {
+export const PATCH = userRoute(async (request: Request, { params }: Ctx, session) => {
   const { id } = await params;
   const body = await request.json();
   const allowed = ["new", "reviewing", "applied", "skipped"];
@@ -138,7 +191,12 @@ export const PATCH = ownerRoute(async (request: Request, { params }: Ctx) => {
   const posting = db
     .update(jobPostings)
     .set({ pipelineStatus: body.pipelineStatus })
-    .where(eq(jobPostings.id, Number(id)))
+    .where(
+      and(
+        eq(jobPostings.id, Number(id)),
+        eq(jobPostings.userId, session.user.id)
+      )
+    )
     .returning()
     .get();
   if (!posting) return Response.json({ error: "공고 없음" }, { status: 404 });

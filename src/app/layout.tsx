@@ -20,7 +20,11 @@ export default async function RootLayout({
       <body className="min-h-full text-[14px]">
         {session && (
           <WorkspaceHeader
-            user={{ name: session.user.name, email: session.user.email }}
+            user={{
+              name: session.user.name,
+              email: session.user.email,
+              role: session.user.role ?? "user",
+            }}
           />
         )}
         <main className="mx-auto max-w-[1460px] px-4 py-6 sm:px-7 sm:py-9">{children}</main>

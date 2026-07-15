@@ -23,17 +23,18 @@ ollama pull qwen3:8b
 # 2. 실행
 npm install
 cp .env.local.example .env.local
-# .env.local의 로그인 비밀값·소유자 이메일·초기 설정 코드를 실제 값으로 교체
+# 인증 비밀값·운영자 이메일·비밀번호 파일 경로(또는 로컬 부트스트랩 비밀번호) 설정
 npm run db:migrate   # 커밋된 SQLite 마이그레이션 적용
 npm run dev       # http://localhost:3000
 ```
 
 Claude API 키가 있으면 `.env.local`에 `ANTHROPIC_API_KEY`를 넣으세요 — 자동으로 Claude를 사용해요 (품질↑, 유료). 없으면 Ollama 로컬 모델로 동작해요 (무료, 데이터가 기기 밖으로 안 나감). 자세한 옵션은 `.env.local.example` 참고.
 
-처음 실행하면 `/setup`에서 `OWNER_EMAIL`의 소유자 계정을 하나만 만든다. 화면에는
-`OWNER_SETUP_TOKEN`과 12자 이상의 새 비밀번호를 입력한다. 공개 회원가입은 비활성화되어
-있으며, 초기 설정이 끝난 뒤에는 설정 코드를 비워도 된다. `BETTER_AUTH_SECRET`은 세션
-서명에 쓰이므로 운영 중 임의로 바꾸지 않는다.
+처음 실행하면 `OPERATOR_EMAIL`의 운영자 계정을 미리 만든다. 12자 이상의 최초 비밀번호는
+`OPERATOR_PASSWORD_FILE` 또는 로컬 개발용 `OPERATOR_BOOTSTRAP_PASSWORD`로 한 번만
+전달하고, 생성 확인 후 제거한다. 기존 경험·공고는 이 운영자에게 자동 귀속된다.
+`SIGNUP_MODE=open`일 때만 `/signup`에서 일반 사용자가 가입할 수 있으며 기본값은
+`closed`다. `BETTER_AUTH_SECRET`은 세션 서명에 쓰이므로 운영 중 임의로 바꾸지 않는다.
 
 스키마를 변경할 때는 `npm run db:generate`로 SQL을 만들고 검토한 뒤
 `npm run db:migrate`로 적용한다. `db:push`는 폐기 가능한 로컬 DB의 빠른 실험에만 쓰고,
@@ -45,6 +46,7 @@ Claude API 키가 있으면 `.env.local`에 `ANTHROPIC_API_KEY`를 넣으세요 
 npm test
 npm run lint
 npm run build
+npm run test:tenant-http  # 방금 빌드한 서버로 가입·관리·계정 격리 검증
 # 앱과 Ollama 실행 후, 저장 없이 경험 분할·병합 실제 모델 회귀 평가
 npm run eval:card-import
 ```
@@ -63,7 +65,8 @@ npm run eval:card-import
 
 - Next.js 16 (App Router) + TypeScript + Tailwind
 - SQLite (`data/app.db`, 저장소에 포함되지 않음) + Drizzle ORM — 스키마: `src/db/schema.ts`
-- Better Auth — 이메일·비밀번호 기반 단일 소유자 로그인, DB 세션, 공개 가입 차단
+- Better Auth — 이메일·비밀번호 가입/로그인, DB 세션, 운영자 사용자 관리
+- 사용자 격리 — 경험·공고와 모든 AI 분석 결과에 `user_id`를 저장하고 요청 계정으로 제한
 - LLM: Ollama 로컬 모델(기본) 또는 Claude API — 추상화: `src/lib/llm.ts`, 파이프라인: `src/lib/pipeline/run.ts`
 - 파이프라인 5단계: 요구사항 추출 → 매칭·적합도·초안·되묻기 → 면접 질문(posting/weakness 분리) → 저작권 2차 검증 → 트랜잭션 저장. 두 LLM 경로 모두 zod 스키마 기반 구조화 출력
 
@@ -83,10 +86,10 @@ docker compose exec ollama ollama pull qwen3:8b
 유지한다. 개인 배포에서는 로그인 확인 뒤에도 방어층으로 유지하는 편을 권장한다.
 VPS 배포·백업·마이그레이션 절차는 [docs/DEPLOY.md](docs/DEPLOY.md).
 
-현재 인증은 **한 명이 하나의 SQLite 데이터 전체를 사용하는 개인 배포용 접근 제어**다.
-경험 카드와 공고에 `user_id`를 붙인 멀티테넌트 구조가 아니므로 두 번째 계정을 만들면
-안 된다. 타인에게 서비스를 여는 SaaS 전환 시에는 기존 설계 방침대로 Postgres,
-전 테이블의 `user_id`, 소유권 검사와 데이터 이관을 한 작업으로 도입한다.
+현재는 개인 실사용 비용을 낮추기 위해 SQLite를 유지하지만 계정별 데이터 소유권과
+격리는 이미 적용한다. 운영자는 `/admin/users`에서 사용자를 조회하고 사용 중지·해제하거나
+세션을 종료할 수 있다. 실제 SaaS 전환 시에는 Postgres, 이메일 인증, 요청 제한,
+감사 로그, 개인정보·탈퇴 정책과 과금 경계를 별도 릴리스로 도입한다.
 
 ## 문서
 

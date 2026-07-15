@@ -1,21 +1,22 @@
 "use client";
 
+import Link from "next/link";
 import { FormEvent, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { authClient } from "@/lib/auth-client";
 
 export default function LoginForm({
-  initialEmail,
   nextPath,
+  signupOpen,
   notice,
 }: {
-  initialEmail: string;
   nextPath: string;
+  signupOpen: boolean;
   notice: string | null;
 }) {
   const router = useRouter();
   const passwordRef = useRef<HTMLInputElement>(null);
-  const [email, setEmail] = useState(initialEmail);
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [rememberMe, setRememberMe] = useState(true);
   const [busy, setBusy] = useState(false);
@@ -33,12 +34,25 @@ export default function LoginForm({
         password,
         rememberMe,
       });
-      if (result.error) throw new Error(result.error.message);
+      if (result.error) {
+        const code = result.error.code;
+        const message =
+          code === "BANNED_USER"
+            ? "이 계정은 사용이 중지되었습니다. 운영자에게 문의해 주세요."
+            : result.error.status === 429
+              ? "요청이 많습니다. 잠시 후 다시 시도해 주세요."
+              : "이메일 또는 비밀번호를 확인해 주세요.";
+        throw new Error(message);
+      }
       router.replace(nextPath);
       router.refresh();
-    } catch {
+    } catch (caught) {
       setPassword("");
-      setError("이메일 또는 비밀번호를 확인해 주세요.");
+      setError(
+        caught instanceof Error
+          ? caught.message
+          : "로그인하지 못했어요. 잠시 후 다시 시도해 주세요."
+      );
       setBusy(false);
       requestAnimationFrame(() => passwordRef.current?.focus());
     }
@@ -65,7 +79,7 @@ export default function LoginForm({
           onChange={(event) => setEmail(event.target.value)}
           disabled={busy}
           className="field"
-          placeholder="owner@example.com"
+          placeholder="you@example.com"
         />
       </div>
       <div>
@@ -107,6 +121,12 @@ export default function LoginForm({
       >
         {busy ? "로그인하고 있어요…" : "워크스페이스 로그인 →"}
       </button>
+      <p className="text-center text-[11px] text-[#7b8780]">
+        {signupOpen ? "처음이신가요? " : "현재 신규 가입은 닫혀 있어요. "}
+        <Link href="/signup" className="font-bold text-[#167b57] hover:text-[#0e6949]">
+          {signupOpen ? "계정 만들기" : "가입 상태 보기"}
+        </Link>
+      </p>
     </form>
   );
 }

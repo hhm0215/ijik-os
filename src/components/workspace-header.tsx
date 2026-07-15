@@ -5,7 +5,7 @@ import AppLogo from "@/components/app-logo";
 export default function WorkspaceHeader({
   user,
 }: {
-  user: { name: string; email: string };
+  user: { name: string; email: string; role: string };
 }) {
   return (
     <header className="sticky top-0 z-20 border-b border-white/70 bg-[#f7f9f7]/85 backdrop-blur-xl">

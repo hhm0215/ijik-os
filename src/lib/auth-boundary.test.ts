@@ -14,9 +14,9 @@ function findFiles(directory: string, filename: string): string[] {
 }
 
 describe("authentication boundary", () => {
-  it("wraps every domain route with the secure owner route guard", () => {
+  it("wraps every domain route with an authenticated user route guard", () => {
     const publicRoutes = new Set([
-      "src/app/api/setup/route.ts",
+      "src/app/api/signup/route.ts",
       "src/app/api/auth/[...all]/route.ts",
     ]);
     const domainRoutes = findFiles("src/app/api", "route.ts").filter(
@@ -25,7 +25,7 @@ describe("authentication boundary", () => {
     assert.ok(domainRoutes.length > 0);
     for (const file of domainRoutes) {
       const source = fs.readFileSync(path.join(root, file), "utf8");
-      assert.match(source, /ownerRoute\(/, `${file} is missing ownerRoute`);
+      assert.match(source, /userRoute\(/, `${file} is missing a user route guard`);
       assert.doesNotMatch(
         source,
         /export async function (GET|POST|PUT|PATCH|DELETE)/,
@@ -37,7 +37,7 @@ describe("authentication boundary", () => {
   it("checks a database-backed session in every protected page", () => {
     const publicPages = new Set([
       "src/app/login/page.tsx",
-      "src/app/setup/page.tsx",
+      "src/app/signup/page.tsx",
     ]);
     const protectedPages = findFiles("src/app", "page.tsx").filter(
       (file) => !publicPages.has(file)
@@ -47,8 +47,8 @@ describe("authentication boundary", () => {
       const source = fs.readFileSync(path.join(root, file), "utf8");
       assert.match(
         source,
-        /requirePageSession\(\)/,
-        `${file} is missing requirePageSession`
+        /require(?:Admin)?PageSession\(\)/,
+        `${file} is missing a page session guard`
       );
     }
   });

@@ -1,4 +1,4 @@
-import { desc, eq } from "drizzle-orm";
+import { and, desc, eq } from "drizzle-orm";
 import Link from "next/link";
 import { db, experienceCards, jobPostings } from "@/db";
 import { requirePageSession } from "@/lib/auth-session";
@@ -21,16 +21,22 @@ const ANALYSIS_LABEL: Record<string, string> = {
 };
 
 export default async function Home() {
-  await requirePageSession();
+  const session = await requirePageSession();
 
   const cards = db
     .select()
     .from(experienceCards)
-    .where(eq(experienceCards.archived, false))
+    .where(
+      and(
+        eq(experienceCards.userId, session.user.id),
+        eq(experienceCards.archived, false)
+      )
+    )
     .all();
   const postings = db
     .select()
     .from(jobPostings)
+    .where(eq(jobPostings.userId, session.user.id))
     .orderBy(desc(jobPostings.collectedAt))
     .all();
 

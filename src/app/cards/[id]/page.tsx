@@ -1,4 +1,4 @@
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { notFound } from "next/navigation";
 import { db, experienceCards } from "@/db";
 import { requirePageSession } from "@/lib/auth-session";
@@ -11,13 +11,18 @@ export default async function EditCardPage({
 }: {
   params: Promise<{ id: string }>;
 }) {
-  await requirePageSession();
+  const session = await requirePageSession();
 
   const { id } = await params;
   const card = db
     .select()
     .from(experienceCards)
-    .where(eq(experienceCards.id, Number(id)))
+    .where(
+      and(
+        eq(experienceCards.id, Number(id)),
+        eq(experienceCards.userId, session.user.id)
+      )
+    )
     .get();
   if (!card) notFound();
 

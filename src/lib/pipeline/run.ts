@@ -1,4 +1,4 @@
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import {
   askbacks,
   db,
@@ -48,24 +48,33 @@ const AUTHORSHIP_RULE = `절대 원칙: 너는 작가가 아니라 편집자다.
 - 카드의 "주장해도 되는 것" 범위를 넘는 주장을 만들지 마라. "주장하면 안 되는 것"은 절대 쓰지 마라.
 - 근거 카드가 없는 요구사항에는 문장을 만들지 말고, 대신 되묻기 질문을 만들어라.`;
 
-export async function runPipeline(postingId: number): Promise<void> {
+export async function runPipeline(postingId: number, userId: string): Promise<void> {
   const posting = db
     .select()
     .from(jobPostings)
-    .where(eq(jobPostings.id, postingId))
+    .where(
+      and(eq(jobPostings.id, postingId), eq(jobPostings.userId, userId))
+    )
     .get();
   if (!posting) throw new Error(`공고 #${postingId}를 찾을 수 없습니다`);
 
   db.update(jobPostings)
     .set({ analysisStatus: "running", analysisError: null })
-    .where(eq(jobPostings.id, postingId))
+    .where(
+      and(eq(jobPostings.id, postingId), eq(jobPostings.userId, userId))
+    )
     .run();
 
   try {
     const cards = db
       .select()
       .from(experienceCards)
-      .where(eq(experienceCards.archived, false))
+      .where(
+        and(
+          eq(experienceCards.userId, userId),
+          eq(experienceCards.archived, false)
+        )
+      )
       .all();
     if (cards.length === 0)
       throw new Error("경험 카드가 없습니다. 먼저 경험 뱅크에 카드를 추가하세요.");
@@ -81,7 +90,9 @@ export async function runPipeline(postingId: number): Promise<void> {
 
     db.update(jobPostings)
       .set({ title: extraction.title, company: extraction.company })
-      .where(eq(jobPostings.id, postingId))
+      .where(
+        and(eq(jobPostings.id, postingId), eq(jobPostings.userId, userId))
+      )
       .run();
 
     // 요구사항은 아직 DB에 넣지 않는다 — 저장은 persist에서 기존 결과 삭제와
@@ -190,7 +201,7 @@ ${sentencesToVerify.map((s, i) => `${i}. [카드 #${s.cardId}] ${s.text}`).join(
     }
 
     // 5) 저장 — 기존 결과 삭제 + 신규 저장을 한 트랜잭션으로
-    persist(postingId, reqDefs, sane, saneInterview, overClaims);
+    persist(postingId, userId, reqDefs, sane, saneInterview, overClaims);
 
     db.update(jobPostings)
       .set({
@@ -199,7 +210,9 @@ ${sentencesToVerify.map((s, i) => `${i}. [카드 #${s.cardId}] ${s.text}`).join(
         fitJson: JSON.stringify(sane.fit),
         verdict: sane.verdict,
       })
-      .where(eq(jobPostings.id, postingId))
+      .where(
+        and(eq(jobPostings.id, postingId), eq(jobPostings.userId, userId))
+      )
       .run();
   } catch (e) {
     db.update(jobPostings)
@@ -207,7 +220,9 @@ ${sentencesToVerify.map((s, i) => `${i}. [카드 #${s.cardId}] ${s.text}`).join(
         analysisStatus: "error",
         analysisError: e instanceof Error ? e.message : String(e),
       })
-      .where(eq(jobPostings.id, postingId))
+      .where(
+        and(eq(jobPostings.id, postingId), eq(jobPostings.userId, userId))
+      )
       .run();
     throw e;
   }
@@ -284,6 +299,7 @@ function sanitize(
 
 function persist(
   postingId: number,
+  userId: string,
   reqDefs: { category: string; text: string }[],
   sane: Analysis,
   interview: Interview["questions"],
@@ -294,18 +310,39 @@ function persist(
     // 중간 실패 시 이전 결과가 그대로 남는다 (중복 누적 방지, IDEAS 2026-07-11)
     // cascade: requirements→matches, drafts→sentences→sources, questions→answer_points
     tx.delete(requirements)
-      .where(eq(requirements.jobPostingId, postingId))
+      .where(
+        and(
+          eq(requirements.userId, userId),
+          eq(requirements.jobPostingId, postingId)
+        )
+      )
       .run();
-    tx.delete(askbacks).where(eq(askbacks.jobPostingId, postingId)).run();
-    tx.delete(drafts).where(eq(drafts.jobPostingId, postingId)).run();
+    tx.delete(askbacks)
+      .where(
+        and(eq(askbacks.userId, userId), eq(askbacks.jobPostingId, postingId))
+      )
+      .run();
+    tx.delete(drafts)
+      .where(and(eq(drafts.userId, userId), eq(drafts.jobPostingId, postingId)))
+      .run();
     tx.delete(interviewQuestions)
-      .where(eq(interviewQuestions.jobPostingId, postingId))
+      .where(
+        and(
+          eq(interviewQuestions.userId, userId),
+          eq(interviewQuestions.jobPostingId, postingId)
+        )
+      )
       .run();
 
     const reqRows = reqDefs.map((r) =>
       tx
         .insert(requirements)
-        .values({ jobPostingId: postingId, category: r.category, text: r.text })
+        .values({
+          userId,
+          jobPostingId: postingId,
+          category: r.category,
+          text: r.text,
+        })
         .returning()
         .get()
     );
@@ -313,6 +350,7 @@ function persist(
     for (const m of sane.matches) {
       tx.insert(matches)
         .values({
+          userId,
           requirementId: reqRows[m.requirementIndex].id,
           cardId: m.cardId,
           strength: m.strength,
@@ -326,6 +364,7 @@ function persist(
       const row = tx
         .insert(askbacks)
         .values({
+          userId,
           jobPostingId: postingId,
           requirementId:
             a.requirementIndex !== null ? reqRows[a.requirementIndex].id : null,
@@ -341,7 +380,7 @@ function persist(
     // 지원 초안 — 근거 없는 요구사항 자리는 placeholder 행으로
     const introDraft = tx
       .insert(drafts)
-      .values({ jobPostingId: postingId, kind: "intro" })
+      .values({ userId, jobPostingId: postingId, kind: "intro" })
       .returning()
       .get();
     let order = 0;
@@ -350,6 +389,7 @@ function persist(
       const sentence = tx
         .insert(draftSentences)
         .values({
+          userId,
           draftId: introDraft.id,
           orderIdx: order++,
           text: s.text,
@@ -366,13 +406,14 @@ function persist(
       verifyIdx++;
       for (const extra of s.additionalCardIds) {
         tx.insert(draftSentenceSources)
-          .values({ sentenceId: sentence.id, cardId: extra })
+          .values({ userId, sentenceId: sentence.id, cardId: extra })
           .run();
       }
     }
     for (const [reqIdx, askbackId] of askbackIdByReq) {
       tx.insert(draftSentences)
         .values({
+          userId,
           draftId: introDraft.id,
           orderIdx: order++,
           text: `"${reqRows[reqIdx].text}" 요구사항은 근거 카드가 없어 문장을 생성하지 않았습니다. 되묻기에 답하면 이 자리가 채워집니다.`,
@@ -384,12 +425,13 @@ function persist(
 
     const resumeDraft = tx
       .insert(drafts)
-      .values({ jobPostingId: postingId, kind: "resume_points" })
+      .values({ userId, jobPostingId: postingId, kind: "resume_points" })
       .returning()
       .get();
     sane.resumePoints.forEach((s, i) => {
       tx.insert(draftSentences)
         .values({
+          userId,
           draftId: resumeDraft.id,
           orderIdx: i,
           text: s.text,
@@ -406,6 +448,7 @@ function persist(
       const question = tx
         .insert(interviewQuestions)
         .values({
+          userId,
           jobPostingId: postingId,
           question: q.question,
           qtype: q.qtype,
@@ -416,6 +459,7 @@ function persist(
       q.answerPoints.forEach((p, pi) => {
         tx.insert(interviewAnswerPoints)
           .values({
+            userId,
             questionId: question.id,
             orderIdx: pi,
             text: p.text,

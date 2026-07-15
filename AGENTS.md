@@ -35,10 +35,12 @@ This version has breaking changes — APIs, conventions, and file structure may 
 
 ```bash
 npm run dev          # 개발 서버 (localhost:3000)
-npm run db:push      # 스키마 변경을 SQLite에 반영 (drizzle-kit push)
+npm run db:migrate   # 검토·커밋된 SQLite 마이그레이션 적용
+npm run db:push      # 폐기 가능한 로컬 DB 실험에만 사용
 npm test             # Node 테스트 러너 + tsx (TypeScript 단위 테스트)
 npm run lint         # ESLint
 npm run build        # 프로덕션 빌드
+npm run test:tenant-http # build 결과에서 가입·로그인·계정 격리 HTTP 회귀 검증
 npm run eval:card-import # 앱+Ollama 실행 상태에서 경험 분할·병합 회귀 평가 (DB 저장 없음)
 ```
 
@@ -66,8 +68,8 @@ npm run eval:card-import # 앱+Ollama 실행 상태에서 경험 분할·병합 
 - **개발은 로컬이 기준이다.** 기능 구현·스키마 변경·파이프라인 품질 확인은 로컬에서 한다.
   VPS는 개발 서버가 아니라, 로컬 품질 게이트를 통과한 커밋을 올려 어디서나 본인이
   사용하는 실사용 검증/릴리스 환경이다. 작은 수정마다 배포하지 않는다.
-- **배포 게이트:** 사용자 흐름 단위가 끝나고 `npm run lint`, `npm run build`, 관련
-  Ollama E2E 검증을 통과한 커밋만 VPS에 배포한다. VPS에서 발견한 불편·품질 이슈는
+- **배포 게이트:** 사용자 흐름 단위가 끝나고 `npm test`, `npm run lint`, `npm run build`,
+  `npm run test:tenant-http`와 관련 Ollama E2E 검증을 통과한 커밋만 VPS에 배포한다. VPS에서 발견한 불편·품질 이슈는
   `IDEAS.md`에 기록하고, 다음 수정은 다시 로컬에서 시작한다.
 - **데이터 경계:** VPS의 SQLite는 실사용 원본, 로컬 SQLite는 개발·테스트용으로
   분리한다. 자동 동기화하지 않으며, 이관은 명시적으로 결정한 경우에만 수행한다.
@@ -78,5 +80,5 @@ npm run eval:card-import # 앱+Ollama 실행 상태에서 경험 분할·병합 
 - **작업 단위 기록:** 검증된 사용자 흐름 또는 의미 있는 작업 단위마다 관련 문서를
   같은 단위로 갱신하고 커밋·푸시한다. 미완성 또는 검증 실패 상태는 자동 푸시하지
   않고 `docs/PROGRESS.md`에 상태와 재개 지점을 남긴다.
-- 서비스화 가능성 유지: 사용자 데이터 하드코딩 금지, DB 접근은 `src/db/` 레이어로 분리 유지, SQLite 전용 기능 사용 금지. 지금은 1인 기준으로 개발하고 멀티유저 전환 방침은 `docs/PLAN.md` §4.1을 따른다.
+- 서비스화 가능성 유지: 사용자 데이터 하드코딩 금지, DB 접근은 `src/db/` 레이어로 분리 유지, 모든 도메인 쿼리의 `user_id` 경계를 보존한다. 개인 실사용 중에는 SQLite를 유지하고 Postgres·이메일 검증·공유 요청 제한·과금은 `docs/PLAN.md` §4.1의 전환 트리거가 충족될 때 도입한다.
 - 이 프로젝트는 하혜민의 **하네스 엔지니어링 학습 교재이기도 하다** — 하네스 구성(스킬/권한/메모리/훅)을 바꿀 때는 무엇을 왜 바꿨는지 설명하고 `docs/HARNESS.md`에 반영한다.

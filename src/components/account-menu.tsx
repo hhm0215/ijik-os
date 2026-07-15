@@ -8,6 +8,7 @@ import { authClient } from "@/lib/auth-client";
 type AccountUser = {
   name: string;
   email: string;
+  role: string;
 };
 
 function getInitial(user: AccountUser) {
@@ -23,6 +24,7 @@ export default function AccountMenu({ user }: { user: AccountUser }) {
   const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const isAdmin = user.role.split(",").map((role) => role.trim()).includes("admin");
 
   useEffect(() => {
     if (!open) return;
@@ -79,7 +81,7 @@ export default function AccountMenu({ user }: { user: AccountUser }) {
           {getInitial(user)}
         </span>
         <span className="hidden max-w-28 truncate pr-1 lg:block">
-          {user.name || "소유자"}
+          {user.name || "사용자"}
         </span>
       </button>
 
@@ -96,7 +98,7 @@ export default function AccountMenu({ user }: { user: AccountUser }) {
               </span>
               <span className="min-w-0">
                 <strong className="block truncate text-[12px] text-[#26332c]">
-                  {user.name || "소유자"}
+                  {user.name || "사용자"}
                 </strong>
                 <span className="mt-0.5 block truncate text-[10px] text-[#87928c]">
                   {user.email}
@@ -105,11 +107,24 @@ export default function AccountMenu({ user }: { user: AccountUser }) {
             </div>
             <p className="mt-3 flex items-center gap-1.5 text-[10px] font-semibold text-[#6b7871]">
               <span className="size-1.5 rounded-full bg-emerald-500" />
-              개인 워크스페이스
+              내 워크스페이스
             </p>
           </div>
 
           <div className="space-y-1 py-2">
+            {isAdmin && (
+              <Link
+                href="/admin/users"
+                role="menuitem"
+                onClick={() => setOpen(false)}
+                className="flex items-center justify-between rounded-xl px-3 py-2.5 text-[12px] font-semibold text-[#536159] hover:bg-[#eef7f2] hover:text-[#126a4a]"
+              >
+                사용자 관리
+                <span className="rounded-full bg-[#172d22] px-2 py-0.5 text-[8px] font-black tracking-[0.08em] text-white">
+                  ADMIN
+                </span>
+              </Link>
+            )}
             <Link
               href="/settings"
               role="menuitem"

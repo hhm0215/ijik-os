@@ -1,8 +1,8 @@
 import { db, experienceCards } from "@/db";
-import { ownerRoute } from "@/lib/auth-session";
+import { userRoute } from "@/lib/auth-session";
 import { cardBatchSchema } from "@/lib/card-import-policy";
 
-export const POST = ownerRoute(async (request) => {
+export const POST = userRoute(async (request, _context, session) => {
   let body: unknown;
   try {
     body = await request.json();
@@ -20,7 +20,11 @@ export const POST = ownerRoute(async (request) => {
 
   const cards = db.transaction((tx) =>
     parsed.data.cards.map((card) =>
-      tx.insert(experienceCards).values(card).returning().get()
+      tx
+        .insert(experienceCards)
+        .values({ ...card, userId: session.user.id })
+        .returning()
+        .get()
     )
   );
 

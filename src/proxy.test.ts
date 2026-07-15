@@ -45,9 +45,9 @@ describe("auth proxy", () => {
     });
   });
 
-  it("leaves the token-protected setup API and Better Auth API reachable", () => {
+  it("leaves the gated signup API and Better Auth API reachable", () => {
     assert.equal(
-      proxy(new NextRequest("http://localhost:3000/api/setup")).status,
+      proxy(new NextRequest("http://localhost:3000/api/signup")).status,
       200
     );
     assert.equal(

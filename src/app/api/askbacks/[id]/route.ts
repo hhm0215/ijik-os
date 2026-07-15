@@ -1,7 +1,7 @@
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { z } from "zod";
 import { askbacks, db, experienceCards } from "@/db";
-import { ownerRoute } from "@/lib/auth-session";
+import { userRoute } from "@/lib/auth-session";
 import { generateStructured } from "@/lib/llm";
 
 export const maxDuration = 300;
@@ -22,7 +22,7 @@ const cardFromAnswerSchema = z.object({
 });
 
 // 되묻기 답변 → 새 경험 카드로 저장 (AI는 사용자의 답변을 구조화만 한다)
-export const POST = ownerRoute(async (request: Request, { params }: Ctx) => {
+export const POST = userRoute(async (request: Request, { params }: Ctx, session) => {
   const { id } = await params;
   const askbackId = Number(id);
   const body = await request.json();
@@ -34,7 +34,12 @@ export const POST = ownerRoute(async (request: Request, { params }: Ctx) => {
   const askback = db
     .select()
     .from(askbacks)
-    .where(eq(askbacks.id, askbackId))
+    .where(
+      and(
+        eq(askbacks.id, askbackId),
+        eq(askbacks.userId, session.user.id)
+      )
+    )
     .get();
   if (!askback) return Response.json({ error: "되묻기 없음" }, { status: 404 });
 
@@ -62,18 +67,31 @@ export const POST = ownerRoute(async (request: Request, { params }: Ctx) => {
     };
   }
 
-  const card = db.insert(experienceCards).values(fields).returning().get();
-  const updated = db
-    .update(askbacks)
-    .set({
-      answer,
-      status: "answered",
-      resultCardId: card.id,
-      resultType: "new_card",
-    })
-    .where(eq(askbacks.id, askbackId))
-    .returning()
-    .get();
+  const { card, updated } = db.transaction((tx) => {
+    const card = tx
+      .insert(experienceCards)
+      .values({ ...fields, userId: session.user.id })
+      .returning()
+      .get();
+    const updated = tx
+      .update(askbacks)
+      .set({
+        answer,
+        status: "answered",
+        resultCardId: card.id,
+        resultType: "new_card",
+      })
+      .where(
+        and(
+          eq(askbacks.id, askbackId),
+          eq(askbacks.userId, session.user.id)
+        )
+      )
+      .returning()
+      .get();
+    if (!updated) throw new Error("되묻기를 갱신할 수 없습니다.");
+    return { card, updated };
+  });
 
   return Response.json({ askback: updated, card });
 });

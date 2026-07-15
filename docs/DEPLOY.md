@@ -1,7 +1,7 @@
 # DEPLOY.md — VPS 배포 가이드 (Docker Compose)
 
 대상 환경: Hostinger VPS (Ubuntu, RAM 8GB, 디스크 100GB), Docker + HTTPS
-리버스 프록시. 현재 구성은 **단일 소유자용 SQLite 앱**이다.
+리버스 프록시. 현재 구성은 **계정별 데이터 격리를 적용한 SQLite 앱**이다.
 
 ## 성능 기대치
 
@@ -25,9 +25,11 @@ cd ijik-os
 cp .env.local.example .env
 chmod 600 .env
 
-# 아래 두 명령의 출력은 서로 다른 값으로 .env에 넣는다.
-openssl rand -base64 32   # BETTER_AUTH_SECRET
-openssl rand -base64 32   # OWNER_SETUP_TOKEN
+# 인증 비밀값은 .env에, 운영자 최초 비밀번호는 별도 파일에 만든다.
+openssl rand -base64 32   # 출력값을 BETTER_AUTH_SECRET에 입력
+install -d -m 700 secrets
+umask 077
+openssl rand -base64 32 > secrets/operator_password
 ```
 
 `.env`에서 다음 값을 반드시 바꾼다.
@@ -36,8 +38,10 @@ openssl rand -base64 32   # OWNER_SETUP_TOKEN
 |---|---|
 | `BETTER_AUTH_SECRET` | 세션 서명·암호화 비밀값. 새 무작위 값을 사용하고 운영 중 임의로 바꾸지 않는다. 변경하면 기존 세션이 모두 무효화된다. |
 | `BETTER_AUTH_URL` | 브라우저가 접속할 정확한 HTTPS origin. 예: `https://ijik.example.com` |
-| `OWNER_EMAIL` | 최초이자 유일한 소유자 로그인 이메일. 이메일 자체는 비밀값이 아니다. |
-| `OWNER_SETUP_TOKEN` | `/setup`에서 한 번 쓰는 초기 설정 코드. 최소 24자이며 `openssl rand -base64 32` 출력을 권장한다. |
+| `OPERATOR_EMAIL` | 서버 시작 전에 미리 만들 운영자 로그인 이메일. 구버전 `/setup` 절차로 만든 계정이 있다면 같은 이메일을 사용한다. |
+| `OPERATOR_NAME` | 신규 운영자 계정에 표시할 이름. 기존 계정 승격 시 기존 이름을 유지한다. |
+| `OPERATOR_PASSWORD_FILE` | Compose가 읽을 최초 운영자 비밀번호 파일의 호스트 경로. 예: `./secrets/operator_password`. 앱 안에는 `/run/secrets/operator_password`로 읽기 전용 마운트된다. |
+| `SIGNUP_MODE` | 정확히 `open`일 때만 일반 회원가입 허용. 최초 배포와 개인 실사용 중 기본값은 `closed`. |
 | `OLLAMA_MODEL` | 기본 `qwen3:8b`. VPS가 너무 느릴 때만 작은 모델을 검토한다. |
 | `ANTHROPIC_API_KEY` | 선택값. 설정하면 Ollama 대신 Claude를 사용한다. |
 
@@ -115,20 +119,32 @@ server {
 TLS 인증서는 Caddy의 자동 HTTPS 또는 nginx+Certbot으로 구성한다. HTTP만으로 로그인
 쿠키를 전송하면 안 된다.
 
-## 4. 최초 소유자 계정 만들기
+## 4. 운영자 부트스트랩과 회원가입 확인
 
-1. Basic Auth가 적용된 `https://ijik.example.com/setup`에 접속한다.
-2. 이름, 새 로그인 비밀번호(12자 이상), `.env`의 `OWNER_SETUP_TOKEN`을 입력한다.
-3. 생성이 끝나면 로그인 화면에서 `OWNER_EMAIL`과 새 비밀번호로 로그인한다.
+앱 서버는 요청을 받기 전에 운영자 계정을 원자적으로 생성한다. 구버전 `/setup` 절차로 만든 계정의
+이메일이 `OPERATOR_EMAIL`과 같으면 비밀번호를 바꾸지 않고 `admin`으로 승격한다. 기존
+경험·공고·분석 데이터의 `user_id`가 비어 있으면 같은 시작 단계에서 운영자에게 귀속한다.
+계정 생성이나 데이터 귀속이 실패하면 서버도 열리지 않는다.
+
+1. `SIGNUP_MODE=closed` 상태로 앱을 시작하고 로그에서 오류가 없는지 확인한다.
+2. `/login`에서 `OPERATOR_EMAIL`과 secret 파일에 만든 비밀번호로 로그인한다.
+3. `/admin/users`에서 현재 계정의 `ADMIN` 표시와 사용자 목록을 확인한다.
 4. 로그아웃→로그인, 보호 페이지 접근, API의 미인증 401을 확인한다.
+5. 일반 가입을 시험할 때만 `SIGNUP_MODE=open`으로 바꾸고 앱을 재시작한 뒤 `/signup`을 사용한다.
 
-공개 회원가입은 비활성화되어 있고 소유자 계정은 하나만 만들 수 있다. 초기 설정이
-끝나면 토큰을 비우고 앱 컨테이너만 다시 생성한다.
+운영자 계정이 이미 있으면 secret 파일의 내용은 다시 읽지 않고 비밀번호도 덮어쓰지 않는다.
+최초 로그인을 확인하면 비밀번호는 패스워드 매니저나 오프라인 비밀 저장소에 옮기고, 서버의
+Compose source 파일은 빈 placeholder로 바꾼다. 파일 자체는 다음 재시작 때 secret mount를
+구성하기 위해 남기되 평문 비밀번호는 보관하지 않는다.
 
 ```bash
-# .env에서 OWNER_SETUP_TOKEN= 으로 비운 뒤
+: > secrets/operator_password
+chmod 600 secrets/operator_password
 docker compose up -d --force-recreate app
 ```
+
+DB와 운영자 계정을 함께 잃은 재해 복구에서는 오프라인에 보관한 비밀번호를 새 secret 파일에
+일시적으로 복원한 뒤 같은 부트스트랩 절차를 수행한다.
 
 Basic Auth 자격 증명만 있고 앱 세션 쿠키가 없는 요청은 보호 API에서 401이어야 한다.
 이 확인이 끝나기 전에는 Basic Auth를 절대 제거하지 않는다. 확인 뒤에도 별도 비밀번호를
@@ -148,6 +164,7 @@ npm run db:migrate
 npm test
 npm run lint
 npm run build
+npm run test:tenant-http
 ```
 
 - `db:generate`는 `drizzle-kit generate`다. `db:migrate`는 앱과 같은 migrator를 실행해
@@ -197,7 +214,9 @@ curl -i http://127.0.0.1:3400/api/auth/get-session
 - `backups/` 디렉터리는 700, 백업 DB는 600이며 Git·Docker 대상이 아닌가
 - `BETTER_AUTH_URL`이 실제 HTTPS 주소와 정확히 같은가
 - `BETTER_AUTH_SECRET`을 안정적으로 보관하고 있는가
-- 최초 설정 후 `OWNER_SETUP_TOKEN`을 비웠는가
+- 운영자 비밀번호 파일이 권한 600이며 Git·Docker 이미지 대상이 아닌가
+- 운영자 계정이 `ADMIN`이고 기존 경험·공고가 운영자 화면에 보이는가
+- `SIGNUP_MODE`가 의도한 값인가(미설정·오타는 모두 닫힘)
 - 앱 포트는 `127.0.0.1:3400`, Ollama는 외부 미노출 상태인가
 - Basic Auth와 앱 로그인이 모두 동작하는가
 - 보호 API가 앱 세션 없이 401을 반환하는가
@@ -205,14 +224,15 @@ curl -i http://127.0.0.1:3400/api/auth/get-session
 
 ## 8. SQLite와 향후 SaaS 전환 경계
 
-현재 Better Auth 계정은 SQLite 데이터 전체를 여는 **단일 소유자 접근 제어**다. 경험
-카드·공고·초안에는 아직 `user_id`가 없으므로 두 번째 계정을 추가하거나 타인에게
-서비스를 열면 데이터가 섞인다.
+현재도 경험 카드·공고·초안·되묻기·면접 결과 등 모든 도메인 행에 `user_id`가 있고,
+페이지·API·LLM 입력과 저장을 로그인 계정으로 제한한다. 따라서 가입 테스트 단계에서도
+운영자와 일반 사용자의 경력 데이터가 섞이지 않는다. 다만 SQLite 단일 프로세스 중심 운영,
+이메일 미검증, 단일 프로세스 메모리에만 있는 가입 제한, 분석 할당량과 감사 로그 부재
+때문에 아직 공개 SaaS 운영 사양은 아니다.
 
-개인 실사용 동안은 SQLite를 유지한다. 타인에게 서비스를 열거나 자동 수집으로 쓰기량이
-커지는 시점에만 Postgres로 전환하고, 인증 사용자와 전 테이블의 `user_id`, 소유권 검사,
-기존 데이터 이관을 한 작업으로 도입한다. 인증이 생겼다는 이유만으로 현재 DB를 곧바로
-멀티테넌트로 간주하지 않는다.
+개인 실사용 동안은 SQLite를 유지한다. 불특정 다수 공개, 자동 수집으로 인한 동시 쓰기,
+결제·팀 기능이 필요해지는 시점에 Postgres로 전환하고 이메일 검증, 여러 인스턴스가
+공유하는 rate limit, 분석 할당량, 감사 로그, 탈퇴·보존·과금 정책을 함께 도입한다.
 
 Mac과 VPS의 SQLite는 서로 다른 DB이며 자동 동기화하지 않는다. 이관이 필요하면 앱을
 정지하고 SQLite backup API로 만든 파일을 명시적으로 옮긴다.

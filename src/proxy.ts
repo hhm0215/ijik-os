@@ -1,13 +1,13 @@
 import { getSessionCookie } from "better-auth/cookies";
 import { NextRequest, NextResponse } from "next/server";
 
-const PUBLIC_PAGES = new Set(["/login", "/setup"]);
+const PUBLIC_PAGES = new Set(["/login", "/signup"]);
 
 export function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
   const hasSessionCookie = Boolean(getSessionCookie(request));
 
-  if (pathname.startsWith("/api/auth") || pathname === "/api/setup") {
+  if (pathname.startsWith("/api/auth") || pathname === "/api/signup") {
     return NextResponse.next();
   }
 

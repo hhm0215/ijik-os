@@ -1,7 +1,7 @@
 import SettingsClient from "./settings-client";
 import { requirePageSession } from "@/lib/auth-session";
 import { llmProviderInfo } from "@/lib/llm";
-import { MIN_OWNER_PASSWORD_LENGTH } from "@/lib/owner-signup-policy";
+import { MIN_PASSWORD_LENGTH } from "@/lib/signup-policy";
 
 export default async function SettingsPage() {
   const session = await requirePageSession();
@@ -31,7 +31,7 @@ export default async function SettingsPage() {
         initialUser={{ name: session.user.name, email: session.user.email }}
         currentSessionToken={session.session.token}
         provider={llmProviderInfo()}
-        minimumPasswordLength={MIN_OWNER_PASSWORD_LENGTH}
+        minimumPasswordLength={MIN_PASSWORD_LENGTH}
       />
     </div>
   );
