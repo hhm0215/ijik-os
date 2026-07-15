@@ -23,7 +23,7 @@ COPY --from=builder /app/.next/static ./.next/static
 COPY --from=builder /app/public ./public
 # 빈 DB 첫 기동 시 스키마 자동 생성에 필요
 COPY --from=builder /app/drizzle ./drizzle
-RUN mkdir -p /app/data && chown -R node:node /app
+RUN mkdir -p /app/data && chown -R node:node /app && chmod 700 /app/data
 USER node
 EXPOSE 3000
 ENV PORT=3000 HOSTNAME=0.0.0.0

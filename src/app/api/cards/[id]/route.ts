@@ -1,9 +1,10 @@
 import { eq } from "drizzle-orm";
 import { db, draftSentences, experienceCards } from "@/db";
+import { ownerRoute } from "@/lib/auth-session";
 
 type Ctx = { params: Promise<{ id: string }> };
 
-export async function GET(_request: Request, { params }: Ctx) {
+export const GET = ownerRoute(async (_request: Request, { params }: Ctx) => {
   const { id } = await params;
   const card = db
     .select()
@@ -12,9 +13,9 @@ export async function GET(_request: Request, { params }: Ctx) {
     .get();
   if (!card) return Response.json({ error: "카드 없음" }, { status: 404 });
   return Response.json(card);
-}
+});
 
-export async function PUT(request: Request, { params }: Ctx) {
+export const PUT = ownerRoute(async (request: Request, { params }: Ctx) => {
   const { id } = await params;
   const cardId = Number(id);
   const body = await request.json();
@@ -45,9 +46,9 @@ export async function PUT(request: Request, { params }: Ctx) {
     .run();
 
   return Response.json(card);
-}
+});
 
-export async function DELETE(_request: Request, { params }: Ctx) {
+export const DELETE = ownerRoute(async (_request: Request, { params }: Ctx) => {
   const { id } = await params;
   // hard delete 금지 — 초안이 출처로 참조하므로 보관 처리만
   const card = db
@@ -58,4 +59,4 @@ export async function DELETE(_request: Request, { params }: Ctx) {
     .get();
   if (!card) return Response.json({ error: "카드 없음" }, { status: 404 });
   return Response.json({ ok: true });
-}
+});

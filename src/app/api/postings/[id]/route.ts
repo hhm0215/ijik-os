@@ -12,10 +12,11 @@ import {
   matches,
   requirements,
 } from "@/db";
+import { ownerRoute } from "@/lib/auth-session";
 
 type Ctx = { params: Promise<{ id: string }> };
 
-export async function GET(_request: Request, { params }: Ctx) {
+export const GET = ownerRoute(async (_request: Request, { params }: Ctx) => {
   const { id } = await params;
   const postingId = Number(id);
   const posting = db
@@ -125,9 +126,9 @@ export async function GET(_request: Request, { params }: Ctx) {
         })),
     })),
   });
-}
+});
 
-export async function PATCH(request: Request, { params }: Ctx) {
+export const PATCH = ownerRoute(async (request: Request, { params }: Ctx) => {
   const { id } = await params;
   const body = await request.json();
   const allowed = ["new", "reviewing", "applied", "skipped"];
@@ -142,4 +143,4 @@ export async function PATCH(request: Request, { params }: Ctx) {
     .get();
   if (!posting) return Response.json({ error: "공고 없음" }, { status: 404 });
   return Response.json(posting);
-}
+});

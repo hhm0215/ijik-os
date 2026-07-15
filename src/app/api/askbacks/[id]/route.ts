@@ -1,6 +1,7 @@
 import { eq } from "drizzle-orm";
 import { z } from "zod";
 import { askbacks, db, experienceCards } from "@/db";
+import { ownerRoute } from "@/lib/auth-session";
 import { generateStructured } from "@/lib/llm";
 
 export const maxDuration = 300;
@@ -21,7 +22,7 @@ const cardFromAnswerSchema = z.object({
 });
 
 // 되묻기 답변 → 새 경험 카드로 저장 (AI는 사용자의 답변을 구조화만 한다)
-export async function POST(request: Request, { params }: Ctx) {
+export const POST = ownerRoute(async (request: Request, { params }: Ctx) => {
   const { id } = await params;
   const askbackId = Number(id);
   const body = await request.json();
@@ -75,4 +76,4 @@ export async function POST(request: Request, { params }: Ctx) {
     .get();
 
   return Response.json({ askback: updated, card });
-}
+});

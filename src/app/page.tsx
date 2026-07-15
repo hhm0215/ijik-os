@@ -1,6 +1,7 @@
 import { desc, eq } from "drizzle-orm";
 import Link from "next/link";
 import { db, experienceCards, jobPostings } from "@/db";
+import { requirePageSession } from "@/lib/auth-session";
 import PasteForm from "./paste-form";
 
 export const dynamic = "force-dynamic";
@@ -19,7 +20,9 @@ const ANALYSIS_LABEL: Record<string, string> = {
   error: "분석 실패",
 };
 
-export default function Home() {
+export default async function Home() {
+  await requirePageSession();
+
   const cards = db
     .select()
     .from(experienceCards)

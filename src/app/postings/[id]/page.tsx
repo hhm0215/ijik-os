@@ -1,3 +1,4 @@
+import { requirePageSession } from "@/lib/auth-session";
 import PostingDetail from "./posting-detail";
 
 export default async function PostingPage({
@@ -5,6 +6,8 @@ export default async function PostingPage({
 }: {
   params: Promise<{ id: string }>;
 }) {
+  await requirePageSession();
+
   const { id } = await params;
   return <PostingDetail postingId={Number(id)} />;
 }

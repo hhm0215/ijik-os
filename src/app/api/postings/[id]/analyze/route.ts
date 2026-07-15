@@ -1,10 +1,11 @@
+import { ownerRoute } from "@/lib/auth-session";
 import { runPipeline } from "@/lib/pipeline/run";
 
 export const maxDuration = 600;
 
 type Ctx = { params: Promise<{ id: string }> };
 
-export async function POST(_request: Request, { params }: Ctx) {
+export const POST = ownerRoute(async (_request: Request, { params }: Ctx) => {
   const { id } = await params;
   try {
     await runPipeline(Number(id));
@@ -15,4 +16,4 @@ export async function POST(_request: Request, { params }: Ctx) {
       { status: 500 }
     );
   }
-}
+});

@@ -1,16 +1,17 @@
 import { eq } from "drizzle-orm";
 import { db, experienceCards } from "@/db";
+import { ownerRoute } from "@/lib/auth-session";
 
-export async function GET() {
+export const GET = ownerRoute(async () => {
   const cards = db
     .select()
     .from(experienceCards)
     .where(eq(experienceCards.archived, false))
     .all();
   return Response.json(cards);
-}
+});
 
-export async function POST(request: Request) {
+export const POST = ownerRoute(async (request) => {
   const body = await request.json();
   if (!body.title || !body.situation || !body.role || !body.action) {
     return Response.json(
@@ -35,4 +36,4 @@ export async function POST(request: Request) {
     .returning()
     .get();
   return Response.json(card, { status: 201 });
-}
+});

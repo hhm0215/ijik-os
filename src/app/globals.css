@@ -38,7 +38,8 @@ body {
 button,
 a,
 input,
-textarea {
+textarea,
+select {
   transition:
     color 160ms ease,
     background-color 160ms ease,
@@ -54,13 +55,15 @@ button:not(:disabled) {
 button:focus-visible,
 a:focus-visible,
 input:focus-visible,
-textarea:focus-visible {
+textarea:focus-visible,
+select:focus-visible {
   outline: 3px solid rgba(22, 123, 87, 0.18);
   outline-offset: 2px;
 }
 
 input,
-textarea {
+textarea,
+select {
   color: var(--ink);
 }
 
@@ -88,6 +91,14 @@ textarea::placeholder {
 
 .field:hover {
   border-color: #becbc4;
+}
+
+.field:disabled,
+.field[readonly] {
+  border-color: #e2e7e4;
+  background: #f2f4f3;
+  color: #7d8982;
+  cursor: not-allowed;
 }
 
 .field:focus {

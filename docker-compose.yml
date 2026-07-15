@@ -7,6 +7,13 @@ services:
     ports:
       - "127.0.0.1:3400:3000"
     environment:
+      # 소유자 인증. 운영 값은 저장소가 아닌 서버의 .env에만 둔다.
+      BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET:?BETTER_AUTH_SECRET is required}
+      BETTER_AUTH_URL: ${BETTER_AUTH_URL:?BETTER_AUTH_URL is required}
+      OWNER_EMAIL: ${OWNER_EMAIL:?OWNER_EMAIL is required}
+      # 최초 /setup 완료 후 .env에서 비워도 된다.
+      OWNER_SETUP_TOKEN: ${OWNER_SETUP_TOKEN:-}
+      DATABASE_PATH: /app/data/app.db
       OLLAMA_BASE_URL: http://ollama:11434
       OLLAMA_MODEL: ${OLLAMA_MODEL:-qwen3:8b}
       # CPU 추론은 느리다 — 호출당 최대 60분 허용

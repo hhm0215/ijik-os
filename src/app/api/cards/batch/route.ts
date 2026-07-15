@@ -1,7 +1,8 @@
 import { db, experienceCards } from "@/db";
+import { ownerRoute } from "@/lib/auth-session";
 import { cardBatchSchema } from "@/lib/card-import-policy";
 
-export async function POST(request: Request) {
+export const POST = ownerRoute(async (request) => {
   let body: unknown;
   try {
     body = await request.json();
@@ -24,4 +25,4 @@ export async function POST(request: Request) {
   );
 
   return Response.json({ cards }, { status: 201 });
-}
+});

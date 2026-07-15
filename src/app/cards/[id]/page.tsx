@@ -1,6 +1,7 @@
 import { eq } from "drizzle-orm";
 import { notFound } from "next/navigation";
 import { db, experienceCards } from "@/db";
+import { requirePageSession } from "@/lib/auth-session";
 import CardForm from "../card-form";
 
 export const dynamic = "force-dynamic";
@@ -10,6 +11,8 @@ export default async function EditCardPage({
 }: {
   params: Promise<{ id: string }>;
 }) {
+  await requirePageSession();
+
   const { id } = await params;
   const card = db
     .select()

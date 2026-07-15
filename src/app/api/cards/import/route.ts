@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { ownerRoute } from "@/lib/auth-session";
 import { generateStructured, llmProviderInfo } from "@/lib/llm";
 import { extractDocument } from "@/lib/document-import";
 import {
@@ -49,7 +50,7 @@ const importSchema = z.object({
   cards: z.array(importedCardSchema).min(1).max(12),
 });
 
-export async function POST(request: Request) {
+export const POST = ownerRoute(async (request) => {
   try {
     const formData = await request.formData();
     const files = formData
@@ -100,4 +101,4 @@ export async function POST(request: Request) {
       { status: 500 }
     );
   }
-}
+});

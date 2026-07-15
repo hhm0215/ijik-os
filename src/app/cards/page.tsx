@@ -1,10 +1,13 @@
 import { desc, eq } from "drizzle-orm";
 import Link from "next/link";
 import { db, experienceCards } from "@/db";
+import { requirePageSession } from "@/lib/auth-session";
 
 export const dynamic = "force-dynamic";
 
-export default function CardsPage() {
+export default async function CardsPage() {
+  await requirePageSession();
+
   const cards = db
     .select()
     .from(experienceCards)
