@@ -29,13 +29,14 @@ This version has breaking changes — APIs, conventions, and file structure may 
   - `ANTHROPIC_API_KEY` 있으면 Claude(`claude-opus-4-8`), 없으면 Ollama 로컬 모델(기본 `qwen3:8b`, `OLLAMA_MODEL`로 변경)
   - 두 경로 모두 zod 스키마 기반 구조화 출력 (Claude: `messages.parse`, Ollama: `format` 파라미터)
   - 사용자는 유료 API 미사용 — 기본 경로는 Ollama. 로컬 8B 모델 품질 한계로 인한 이슈는 프롬프트 단순화/호출 분할로 대응
-- LLM 파이프라인: `src/lib/pipeline/` (요구사항 추출 → 매칭/적합도 → 초안 → 되묻기 → 면접 질문)
+- LLM 파이프라인: `src/lib/pipeline/` (요구사항 추출 → 매칭·적합도·초안·되묻기 → 면접 질문(posting/weakness 분리) → 저작권 2차 검증 → 트랜잭션 저장)
 
 ## 명령어
 
 ```bash
 npm run dev          # 개발 서버 (localhost:3000)
 npm run db:push      # 스키마 변경을 SQLite에 반영 (drizzle-kit push)
+npm run lint         # ESLint
 npm run build        # 프로덕션 빌드
 ```
 
@@ -52,13 +53,13 @@ npm run build        # 프로덕션 빌드
 
 - `/run-app` — 앱 실행 + 스모크 테스트 (Ollama 확인 포함)
 - `/pipeline-eval` — 분석 품질 점검 (불변식 + 휴리스틱), 프롬프트 수정 후 회귀 확인
-- `/wrap-session` — 세션 마무리 (IDEAS/PROGRESS 갱신 + 커밋)
+- `/wrap-session` — 검증 + IDEAS/PROGRESS 갱신 + 커밋·푸시
 
 해당 상황이면 사용자가 부르지 않아도 능동적으로 사용한다. 반복 절차가 새로 생기면 스킬로 추출을 제안할 것.
 
 ## 작업 방식 (하혜민과의 합의)
 
-- **MVP는 Claude가 구성, 하혜민이 실사용 → 피드백으로 반복 개선.**
+- **MVP는 개발 에이전트가 구성, 하혜민이 실사용 → 피드백으로 반복 개선.**
 - 단계 확장 순서는 `docs/PLAN.md` §6 로드맵을 따른다. 앞 단계가 실사용에서 검증되기 전에 뒷 단계를 만들지 말 것.
 - **개발은 로컬이 기준이다.** 기능 구현·스키마 변경·파이프라인 품질 확인은 로컬에서 한다.
   VPS는 개발 서버가 아니라, 로컬 품질 게이트를 통과한 커밋을 올려 어디서나 본인이
@@ -72,5 +73,8 @@ npm run build        # 프로덕션 빌드
   `ijik-api`는 별도 백엔드 포트폴리오이며, 두 저장소의 API·DB·LLM 파이프라인을
   연결하거나 이 프로젝트를 Express/MySQL로 마이그레이션하지 않는다. 구조 통합은
   사용자가 명시적으로 제품 아키텍처 전환을 결정할 때만 검토한다.
+- **작업 단위 기록:** 검증된 사용자 흐름 또는 의미 있는 작업 단위마다 관련 문서를
+  같은 단위로 갱신하고 커밋·푸시한다. 미완성 또는 검증 실패 상태는 자동 푸시하지
+  않고 `docs/PROGRESS.md`에 상태와 재개 지점을 남긴다.
 - 서비스화 가능성 유지: 사용자 데이터 하드코딩 금지, DB 접근은 `src/db/` 레이어로 분리 유지, SQLite 전용 기능 사용 금지. 지금은 1인 기준으로 개발하고 멀티유저 전환 방침은 `docs/PLAN.md` §4.1을 따른다.
 - 이 프로젝트는 하혜민의 **하네스 엔지니어링 학습 교재이기도 하다** — 하네스 구성(스킬/권한/메모리/훅)을 바꿀 때는 무엇을 왜 바꿨는지 설명하고 `docs/HARNESS.md`에 반영한다.

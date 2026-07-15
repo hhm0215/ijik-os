@@ -39,6 +39,14 @@ const importSchema = z.object({
   cards: z.array(importedCardSchema).min(1).max(12),
 });
 
+function normalizeForQuoteCheck(value: string): string {
+  return value
+    .normalize("NFKC")
+    .replace(/[“”„‟‘’‚‛"'`]/g, "")
+    .replace(/\s+/g, "")
+    .toLocaleLowerCase("ko-KR");
+}
+
 export async function POST(request: Request) {
   try {
     const formData = await request.formData();
@@ -82,8 +90,18 @@ export async function POST(request: Request) {
       user: source,
     });
 
+    const normalizedSource = normalizeForQuoteCheck(source);
+    const cards = result.cards.map((card) => {
+      const normalizedQuote = normalizeForQuoteCheck(card.sourceQuote);
+      return {
+        ...card,
+        sourceQuoteVerified:
+          normalizedQuote.length >= 10 && normalizedSource.includes(normalizedQuote),
+      };
+    });
+
     return Response.json({
-      cards: result.cards,
+      cards,
       sources: documents.map((document) => document.name),
       truncated,
       provider: llmProviderInfo(),

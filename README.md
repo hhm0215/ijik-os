@@ -31,7 +31,7 @@ Claude API 키가 있으면 `.env.local`에 `ANTHROPIC_API_KEY`를 넣으세요 
 ## 사용 흐름
 
 1. **경험 뱅크**에 직접 카드를 작성하거나, 이력서·자소서·포트폴리오 문서에서 경험 후보를 가져온다.
-2. **공고 피드**에서 채용 공고 본문을 붙여넣는다 → 분석 시작 (1~3분).
+2. **공고 피드**에서 채용 공고 본문을 붙여넣는다 → 분석 시작 (로컬 qwen3:8b 기준 약 6분, VPS CPU 환경은 20분~1시간 소요 가능).
 3. **공고 상세**에서 확인: 요구사항 분해+매칭 / 적합도 breakdown+출처 달린 초안 / 되묻기 질문.
 4. 되묻기에 답하면 새 경험 카드로 저장 → "다시 분석"하면 초안에 반영.
 
@@ -40,7 +40,7 @@ Claude API 키가 있으면 `.env.local`에 `ANTHROPIC_API_KEY`를 넣으세요 
 - Next.js 16 (App Router) + TypeScript + Tailwind
 - SQLite (`data/app.db`, 저장소에 포함되지 않음) + Drizzle ORM — 스키마: `src/db/schema.ts`
 - LLM: Ollama 로컬 모델(기본) 또는 Claude API — 추상화: `src/lib/llm.ts`, 파이프라인: `src/lib/pipeline/run.ts`
-- 파이프라인 3단계: 요구사항 추출 → 매칭/적합도/초안/되묻기/면접 질문 → 저작권 2차 검증. 두 LLM 경로 모두 zod 스키마 기반 구조화 출력
+- 파이프라인 5단계: 요구사항 추출 → 매칭·적합도·초안·되묻기 → 면접 질문(posting/weakness 분리) → 저작권 2차 검증 → 트랜잭션 저장. 두 LLM 경로 모두 zod 스키마 기반 구조화 출력
 
 ## 서버 배포 (선택)
 
@@ -59,4 +59,4 @@ docker compose exec ollama ollama pull qwen3:8b
 - [docs/DEPLOY.md](docs/DEPLOY.md) — VPS 배포 가이드
 - [docs/WINDOWS.md](docs/WINDOWS.md) — Windows에서 최신 세션 이어서 개발하기
 - [docs/HARNESS.md](docs/HARNESS.md) — 이 프로젝트를 교재로 한 AI 하네스 엔지니어링 학습 노트
-- `AGENTS.md` — AI 협업 규칙 (Claude Code용 컨텍스트), `IDEAS.md` — 아이디어/피드백 큐
+- `AGENTS.md` — AI 개발 협업 규칙, `IDEAS.md` — 아이디어/피드백 큐

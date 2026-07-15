@@ -6,6 +6,7 @@ import type { CardValues } from "../card-form";
 
 type Candidate = CardValues & {
   sourceQuote: string;
+  sourceQuoteVerified: boolean;
   needsReview: (keyof CardValues)[];
   selected: boolean;
 };
@@ -56,7 +57,7 @@ export default function DocumentImporter() {
       const response = await fetch("/api/cards/import", { method: "POST", body });
       const result = (await response.json()) as ImportResponse;
       if (!response.ok) throw new Error(result.error ?? "문서를 분석하지 못했어요.");
-      setCandidates(result.cards.map((card) => ({ ...card, selected: true })));
+      setCandidates(result.cards.map((card) => ({ ...card, selected: false })));
       setMeta({ provider: result.provider, truncated: result.truncated });
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : String(cause));
@@ -86,16 +87,14 @@ export default function DocumentImporter() {
     setSaving(true);
     setError(null);
     try {
-      for (const card of selected) {
-        const response = await fetch("/api/cards", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(card),
-        });
-        if (!response.ok) {
-          const result = await response.json();
-          throw new Error(result.error ?? `${card.title} 저장 실패`);
-        }
+      const response = await fetch("/api/cards/batch", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ cards: selected }),
+      });
+      if (!response.ok) {
+        const result = await response.json();
+        throw new Error(result.error ?? "경험 카드 일괄 저장 실패");
       }
       router.push("/cards");
       router.refresh();
@@ -183,7 +182,12 @@ export default function DocumentImporter() {
                     <summary className="cursor-pointer text-[11px] font-bold text-[#536159]">성과·배운 점·주장 범위 등 추가 항목</summary>
                     <div className="mt-4 grid gap-4 md:grid-cols-2">{EXTRA_FIELDS.map((field) => <label key={field.key} className={field.key === "evidenceSentence" || field.key === "claimable" ? "md:col-span-2" : ""}><span className="mb-1.5 block text-[10px] font-bold text-[#647169]">{field.label}{card.needsReview.includes(field.key) && <em className="ml-1 not-italic text-[#b16e24]">확인</em>}</span><textarea value={card[field.key]} onChange={(event) => updateCandidate(index, field.key, event.target.value)} className="field min-h-20 resize-y text-[12px]" /></label>)}</div>
                   </details>
-                  <div className="md:col-span-2 rounded-xl bg-[#f2f6f4] p-3 text-[10px] leading-5 text-[#718078]"><strong className="text-[#536159]">원문 근거</strong><br />{card.sourceQuote || "원문 인용이 없습니다. 내용을 특히 주의해서 확인하세요."}</div>
+                  <div className={`md:col-span-2 rounded-xl p-3 text-[10px] leading-5 ${card.sourceQuoteVerified ? "bg-[#f2f6f4] text-[#718078]" : "bg-[#fff7e8] text-[#87602b]"}`}>
+                    <strong className={card.sourceQuoteVerified ? "text-[#536159]" : "text-[#9a6729]"}>
+                      원문 근거 {card.sourceQuoteVerified ? "✓" : "· 직접 확인 필요"}
+                    </strong><br />
+                    {card.sourceQuote || "원문에서 일치하는 인용을 확인하지 못했습니다. 카드 내용을 특히 주의해서 검토하세요."}
+                  </div>
                 </div>
               </article>
             ))}

@@ -14,19 +14,27 @@ description: 이직 OS 앱을 실행하고 정상 동작을 확인할 때 사용
    - 응답 없으면: `brew services start ollama` 후 재확인
    - `qwen3:8b`(또는 `OLLAMA_MODEL`에 설정된 모델)가 목록에 없으면 사용자에게 `ollama pull` 필요 여부 확인
 
-2. **dev 서버 실행** (백그라운드):
+2. **기존 포트의 앱 정체 확인**:
+   ```bash
+   curl -i -s http://127.0.0.1:3000/api/cards
+   ```
+   - `200` + `application/json` 배열이면 기존 ijik-os 서버를 재사용한다.
+   - HTML이나 다른 앱 응답이면 사용자 프로세스를 임의 종료하지 말고, 아래 실행 명령에 `-- -p <빈 포트>`를 붙인다.
+
+3. **dev 서버 실행** (백그라운드, 기존 ijik-os가 없을 때):
    ```bash
    npm run dev
    ```
-   기본 포트 3000. 이미 떠 있으면 재사용.
+   기본 포트 3000. 포트 충돌 시 Next가 출력한 실제 URL과 프로세스 디렉터리를 확인한다.
+   단순히 다음 포트가 출력됐다는 이유만으로 그 포트의 기존 앱을 ijik-os로 간주하지 않는다.
 
-3. **스모크 체크**:
+4. **스모크 체크** (`APP_URL`은 확인된 실제 ijik-os 주소):
    ```bash
-   curl -s -o /dev/null -w "%{http_code}" http://localhost:3000/        # 200
-   curl -s http://localhost:3000/api/cards | head -c 100                # JSON 배열
+   curl -s -o /dev/null -w "%{http_code}" "$APP_URL/"        # 200
+   curl -i -s "$APP_URL/api/cards"                            # 200 + JSON 배열
    ```
 
-4. **보고**: 접속 URL, Ollama 모델명, 카드/공고 개수(`sqlite3 data/app.db "SELECT count(*) FROM experience_cards WHERE archived=0; SELECT count(*) FROM job_postings;"`)를 한 줄로 알려준다.
+5. **보고**: 접속 URL, Ollama 모델명, 카드/공고 개수(`sqlite3 data/app.db "SELECT count(*) FROM experience_cards WHERE archived=0; SELECT count(*) FROM job_postings;"`)를 한 줄로 알려준다. 포트 충돌이 있었다면 다른 앱의 포트와 검증에 사용한 포트를 함께 남긴다.
 
 ## 주의
 
